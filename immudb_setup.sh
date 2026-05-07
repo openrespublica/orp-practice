@@ -22,7 +22,7 @@ BIN_DIR="$HOME/bin"
 SRC_DIR="$HOME/immudb-src"
 VAULT_DIR="$HOME/.orp_vault"
 IMMUDB_REPO="https://github.com/codenotary/immudb.git"
-IMMUDB_TAG="v1.9.0"
+IMMUDB_TAG="v1.10.0"
 REQUIRED_GO_MAJOR=1
 REQUIRED_GO_MINOR=17
 
