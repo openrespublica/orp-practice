@@ -1,0 +1,19 @@
+{
+  "lgu": {
+    "name": "BARANGAY BUNAO",
+    "signer_name": "HON. MARCO C. FERNANDEZ",
+    "signer_position": "SK MEMBER",
+    "timezone": "Asia/Manila"
+  },
+  "portal": {
+    "title": "TruthChain Verification",
+    "subtitle": "LGU BARANGAY BUNAO · Cryptographic Document Audit Portal"
+  },
+  "github": {
+    "owner": "openrespublica-ph",
+    "repo": "truthchain",
+    "portal_url": "https://openrespublica-ph.github.io/truthchain/verify.html"
+  },
+  "generated": "2026-05-13T17:42:33Z",
+  "version": "1.0.0"
+}
