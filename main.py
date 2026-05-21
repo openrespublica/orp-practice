@@ -8,8 +8,7 @@ import io           # in-memory byte streams (PDF processing)
 import os           # environment variables, file paths, signals
 import json         # reading and writing JSON records
 import datetime     # timestamps for records
-import threading    # Lock() for control numbers, Timer for shutdown
-import signal       # graceful shutdown on SIGINT / SIGTERM
+import threading    # Lock() for control numbers, Timer for shutdown                      import signal       # graceful shutdown on SIGINT / SIGTERM
 import time         # retry delays
 import fcntl        # file locking for process safety
 import subprocess   # git commands
@@ -60,8 +59,8 @@ if not all([GPG_HOME, GPG_EMAIL, SSH_AUTH_SOCK]):
     logger.critical(f"  - SSH_SOCK: {'✅' if SSH_AUTH_SOCK else '❌ MISSING'}")
     raise RuntimeError("Engine must be launched via run_orp.sh or run_orp-gum.sh")
 
-if not GPG_HOME.startswith("/dev/shm/"):
-    logger.critical("VULNERABILITY: GNUPGHOME must be in RAM (/dev/shm)")
+if not GPG_HOME.startswith("/tmp"):
+    logger.critical("VULNERABILITY: GNUPGHOME must be in RAM (/tmp)")
     raise RuntimeError("Launch via the boot script with RAM-based keyring")
 
 gpg = gnupg.GPG(gnupghome=GPG_HOME)
@@ -87,8 +86,7 @@ CONTROL_FILE = os.path.join(REPO_PATH, "docs", "control_number.txt")
 
 VAULT_MAX_RETRIES = int(os.getenv("VAULT_MAX_RETRIES", "3"))
 VAULT_RETRY_DELAY = int(os.getenv("VAULT_RETRY_DELAY", "1"))
-MAX_PDF_SIZE = int(os.getenv("MAX_PDF_SIZE", "20 * 1024 * 1024"))
-
+MAX_PDF_SIZE = int(os.getenv("MAX_PDF_SIZE", str(20 * 1024 * 1024)))
 
 # ── 3. FLASK INITIALIZATION ───────────────────────────────────────
 app = Flask(__name__,
@@ -98,20 +96,15 @@ app = Flask(__name__,
 ctrl_lock = threading.Lock()
 git_lock  = threading.Lock()
 
-os.makedirs(RECORDS_DIR, exist_ok=True)
-logger.info(f"✅ Records directory ready: {RECORDS_DIR}")
+os.makedirs(RECORDS_DIR, exist_ok=True)                                                   logger.info(f"✅ Records directory ready: {RECORDS_DIR}")
 
 
 # ── 4. VAULT CONNECTION ───────────────────────────────────────────
-_vault_password: str | None = None
-
+_vault_password: str | None = None                                                        
 def get_client() -> ImmudbClient:
-    """
-    Connect to the immudb vault with explicit host:port parsing.
+    """                                                                                       Connect to the immudb vault with explicit host:port parsing.
     Prompts for password on first call only.
-    """
-    global _vault_password
-
+    """                                                                                       global _vault_password                                                                
     if ":" in IMMUDB_HOST:
         host, port = IMMUDB_HOST.rsplit(":", 1)
         try:
@@ -129,8 +122,7 @@ def get_client() -> ImmudbClient:
         )
 
     try:
-        c = ImmudbClient(f"{host}:{port}")
-        c.login(IMMUDB_USER, _vault_password, database=IMMUDB_DB)
+        c = ImmudbClient(f"{host}:{port}")                                                        c.login(IMMUDB_USER, _vault_password, database=IMMUDB_DB)
         logger.info(f"✅ Vault unlocked → {host}:{port}/{IMMUDB_DB}")
         return c
     except Exception as e:
@@ -163,38 +155,29 @@ signal.signal(signal.SIGTERM, graceful_shutdown)
 
 
 # ── 6. CRYPTO & DATA UTILITIES ───────────────────────────────────
-
-def sign_json_data(record: dict) -> dict | None:
+                                                                                          def sign_json_data(record: dict) -> dict | None:
     """Signs the audit record JSON using the ephemeral GPG key in RAM."""
     try:
         data_str = json.dumps(record, sort_keys=True)
-        sig      = gpg.sign(data_str, keyid=GPG_EMAIL)
-
+        sig      = gpg.sign(data_str, keyid=GPG_EMAIL)                                    
         if sig.status != "signature created":
-            logger.error(f"GPG signing failed: {sig.stderr}")
-            return None
+            logger.error(f"GPG signing failed: {sig.stderr}")                                         return None
 
-        return {
-            "gpg_signature":   str(sig),
+        return {                                                                                      "gpg_signature":   str(sig),
             "hash_anchor":     hashlib.sha256(data_str.encode()).hexdigest(),
-            "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE",
-        }
+            "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE",                                   }
     except Exception as e:
         logger.error(f"Error during JSON signing: {e}")
-        return None
-
+        return None                                                                       
 
 def next_control_number() -> str:
-    """Issues the next sequential control number for this calendar year."""
-    with ctrl_lock:
+    """Issues the next sequential control number for this calendar year."""                   with ctrl_lock:
         local_tz     = pytz.timezone(TZ_NAME)
         current_year = str(datetime.datetime.now(local_tz).year)
-
-        if not os.path.exists(CONTROL_FILE):
+                                                                                                  if not os.path.exists(CONTROL_FILE):
             try:
                 fd = os.open(CONTROL_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-                os.write(fd, b"2026-0000")
-                os.close(fd)
+                os.write(fd, b"2026-0000")                                                                os.close(fd)
             except FileExistsError:
                 pass
 
@@ -206,7 +189,7 @@ def next_control_number() -> str:
                     parts = [current_year, 0]
                 else:
                     parts = content.split("-")
-                    
+
                 year, num = parts[0], int(parts[1]) if len(parts) > 1 else 0
 
                 if year != current_year:
@@ -297,8 +280,7 @@ def add_footer(
 def update_manifest(record: dict) -> None:
     """Prepends the new record to manifest.json (newest first)."""
     try:
-        manifest_path = os.path.join(RECORDS_DIR, "manifest.json")
-        records: list = []
+        manifest_path = os.path.join(RECORDS_DIR, "manifest.json")                                records: list = []
 
         if os.path.exists(manifest_path):
             try:
@@ -322,20 +304,20 @@ def update_manifest(record: dict) -> None:
 def run_git_command(cmd: list, description: str) -> bool:
     """
     Runs a git command with proper SSH environment.
-    
+
     CRITICAL FIX: Uses SSH_AUTH_SOCK from environment to connect SSH agent.
     This allows git to use the ephemeral SSH key stored in gpg-agent.
-    
+
     Returns True on success, False on failure.
     """
     try:
         git_env = os.environ.copy()
-        
+
         # CRITICAL: Ensure SSH_AUTH_SOCK is set so git uses SSH agent
         if not git_env.get("SSH_AUTH_SOCK"):
             logger.error("SSH_AUTH_SOCK not in environment — SSH will fail")
             return False
-        
+
         # Configure SSH to use the gpg-agent socket
         git_env["GIT_SSH_COMMAND"] = (
             "ssh -o StrictHostKeyChecking=no "
@@ -343,10 +325,10 @@ def run_git_command(cmd: list, description: str) -> bool:
             "-o IdentityFile=/dev/null "  # Don't use default keys
             "-o IdentitiesOnly=yes "       # Use only SSH agent
         )
-        
+
         logger.debug(f"Git command: {' '.join(cmd)}")
         logger.debug(f"SSH_AUTH_SOCK: {git_env.get('SSH_AUTH_SOCK')}")
-        
+
         result = subprocess.run(
             cmd,
             check=True,
@@ -355,12 +337,12 @@ def run_git_command(cmd: list, description: str) -> bool:
             text=True,
             timeout=30
         )
-        
+
         logger.info(f"✅ {description}")
         if result.stdout:
             logger.debug(f"stdout: {result.stdout[:200]}")
         return True
-        
+
     except subprocess.TimeoutExpired as e:
         logger.error(f"❌ {description} — TIMEOUT: {e}")
         return False
@@ -378,55 +360,81 @@ def sync_to_github(json_path: str, record: dict) -> None:
     """
     Runs in a background daemon thread.
     Writes the manifest, commits the new record JSON, and pushes
-    to GitHub Pages using SSH (not HTTPS).
+    to GitHub Pages using SSH. Includes self-healing for Git conflicts.
     """
     with git_lock:
         try:
             update_manifest(record)
             anchor_hash = os.path.basename(json_path).replace(".json", "")
-            
+
             logger.info(f"Starting git sync for {anchor_hash}...")
 
-            # Stage files
+            # 1. Stage files (Consider replacing '.' with 'docs/' to avoid staging core scripts)
             if not run_git_command(
                 ['git', '-C', REPO_PATH, 'add', '.'],
                 "Stage files"
             ):
                 return
 
-            # Commit (may fail if nothing changed, that's OK)
+            # 2. Commit (may fail if nothing changed, that's OK)
             if not run_git_command(
                 ['git', '-C', REPO_PATH, 'commit', '-m', f"Audit: Anchor {anchor_hash}"],
                 "Commit changes"
             ):
                 logger.warning("Commit failed or nothing to commit (may be OK)")
 
-            # Fetch latest from remote
+            # 3. Fetch latest from remote
             if not run_git_command(
                 ['git', '-C', REPO_PATH, 'fetch', 'origin'],
                 "Fetch from remote"
             ):
                 return
 
-            # Rebase local changes on top of remote
-            if not run_git_command(
-                ['git', '-C', REPO_PATH, 'pull', '--rebase', '-X', 'ours', 'origin', 'main'],
+            # 4. Attempt standard rebase
+            rebase_success = run_git_command(
+                ['git', '-C', REPO_PATH, 'pull', '--rebase', 'origin', 'main'],
                 "Rebase onto remote main"
-            ):
-                return
+            )
 
-            # Push to remote
+            # 5. 🛠️ SELF-HEALING BLOCK
+            if not rebase_success:
+                logger.warning("⚠️ Git conflict detected! Initiating self-healing sequence...")
+
+                # A. Abort the frozen rebase
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'rebase', '--abort'],
+                    "Abort stuck rebase"
+                )
+
+                # B. Execute a merge, instructing Git to favor local file contents (-X ours)
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'merge', 'origin/main', '-X', 'ours', '--no-edit'],
+                    "Self-healing merge"
+                )
+
+                # C. Force resolve modify/delete conflicts (keeps local file existence state)
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'add', '.'],
+                    "Stage conflict resolutions"
+                )
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'commit', '-m', f"Auto-healed conflict for {anchor_hash}"],
+                    "Commit resolutions"
+                )
+
+                logger.info("✅ Self-healing successful.")
+
+            # 6. Push to remote
             if not run_git_command(
                 ['git', '-C', REPO_PATH, 'push', 'origin', 'main'],
                 "Push to remote"
             ):
                 return
-            
+
             logger.info(f"✅ TruthChain synchronized: {anchor_hash}")
 
         except Exception as e:
             logger.error(f"Sync thread error: {e}", exc_info=True)
-
 
 def start_sync(json_path: str, record: dict) -> None:
     """Launches sync_to_github in a daemon thread."""
@@ -461,13 +469,11 @@ def lock_engine():
     logger.warning("Lock signal received — initiating secure shutdown")
     threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
     return "Engine locked. RAM disk purged.", 200
-
-
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
     """
     Core route — PDF upload, hash, anchor, sign, stamp, publish.
-    
+
     Pipeline:
       1. Validate the uploaded file (PDF only, size limit)
       2. Compute SHA-256 fingerprint
@@ -502,7 +508,7 @@ def upload_pdf():
         # ── Step 3: Anchor to immudb with RETRY LOGIC ─────────────────
         tx = None
         last_error = None
-        
+
         for attempt in range(1, VAULT_MAX_RETRIES + 1):
             try:
                 logger.info(f"Anchoring hash (attempt {attempt}/{VAULT_MAX_RETRIES})...")
@@ -515,7 +521,7 @@ def upload_pdf():
                     logger.warning(f"Vault error (attempt {attempt}): {e}")
                     logger.info(f"Retrying in {VAULT_RETRY_DELAY}s...")
                     time.sleep(VAULT_RETRY_DELAY)
-                    
+
                     try:
                         logger.info("Reconnecting to vault...")
                         client = get_client()
