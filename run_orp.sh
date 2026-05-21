@@ -1,44 +1,59 @@
-#!/bin/bash
-# run_orp.sh — ORP Engine Plain Terminal Launcher
+#!/usr/bin/env bash
+# run_orp.sh — ORP Engine Plain Terminal Launcher (Alpine proot-distro)
 # ─────────────────────────────────────────────────────────────────
 # Starts the ORP Engine in a plain terminal (no gum required).
-# Compatible with Ubuntu WSL2 and Termux proot-distro Ubuntu.
+# Compatible with Ubuntu WSL2, Termux proot-distro Ubuntu, and
+# Termux proot-distro Alpine.
+#
+# Alpine prerequisites (run once as root inside proot):
+#   apk add bash gnupg openssh nginx procps
+#   # immudb: download the static/musl binary from
+#   #   https://github.com/codenotary/immudb/releases
+#   #   and place it at ~/bin/immudb (chmod +x)
 #
 # Boot sequence:
 #   1. Load .env and ~/.identity/db_secrets.env
-#   2. Generate ephemeral Ed25519 session keys in /dev/shm (RAM)
-#   3. Start immudb vault on :3322 (or attach if already running)
-#   4. Configure git signing with the session GPG key
-#   5. Start/reload Nginx mTLS gateway
-#   6. Display session SSH and GPG public keys
-#   7. Wait for operator to paste SSH key to GitHub
-#   8. Launch Gunicorn (exec — replaces this shell)
+#   2. Detect /dev/shm availability (warn if not a real tmpfs)
+#   3. Generate ephemeral Ed25519 session keys in RAM (or /tmp)
+#   4. Start immudb vault on :3322 (or attach if already running)
+#   5. Configure git signing with the session GPG key
+#   6. Start/reload Nginx mTLS gateway
+#   7. Display session SSH and GPG public keys
+#   8. Wait for operator to paste SSH key to GitHub
+#   9. Launch Gunicorn (exec — replaces this shell)
 #
 # On exit (Ctrl+C or Lock Engine):
-#   → orp_cleanup() wipes /dev/shm RAM disk
+#   → orp_cleanup() wipes the SHM directory
 #   → All ephemeral keys are permanently destroyed
+# ─────────────────────────────────────────────────────────────────
+#
+# NOTE on shebang: Alpine does not install bash at /bin/bash by
+# default.  "#!/usr/bin/env bash" locates whichever bash is on
+# PATH (typically /usr/bin/bash after: apk add bash).
+# If you are certain bash is always at /bin/bash on your target,
+# you may revert to #!/bin/bash.
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
+# BASH_SOURCE[0] is bash-specific and requires bash (not sh/ash).
+# The #!/usr/bin/env bash shebang guarantees we are in bash here.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # shellcheck source=./_orp_core.sh
 source "$SCRIPT_DIR/_orp_core.sh"
 
 # Register cleanup trap — fires on exit, Ctrl+C (INT), and TERM.
-# orp_cleanup() is defined in _orp_core.sh.
 trap orp_cleanup EXIT INT TERM
 
 # ── Boot sequence ─────────────────────────────────────────────────
-orp_load_env
+orp_load_env          # also calls _orp_shm_init, sets ORP_SHM_BASE
 orp_forge_identity
 orp_start_vault
 orp_configure_git
 orp_refresh_gateway
 
 # ── Session check-in display ─────────────────────────────────────
-# Note: heredoc must be unquoted (<<EOF not <<'EOF') so that
-# variables like $LGU_SIGNER_NAME expand correctly.
 clear
 cat <<EOF
 ╔═══════════════════════════════════════════════════════════════╗
@@ -48,6 +63,7 @@ cat <<EOF
   Identity:   $LGU_SIGNER_NAME
   GPG Key ID: $KEY_ID
   SSH Socket: $SSH_AUTH_SOCK
+  Key store:  $ORP_SHM_BASE  ($([ "$ORP_SHM_BASE" = "/dev/shm" ] && echo "RAM" || echo "⚠ storage — not RAM"))
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   SESSION SSH PUBLIC KEY  (paste this into GitHub Settings)
@@ -77,15 +93,15 @@ $(cat "$ORP_IDENTITY_DIR/session.gpg")
        Click "Add SSH Key"
 
   ⚠️  IMPORTANT: This key is EPHEMERAL.
-      It exists only in RAM and will be wiped when you exit.
+      It will be wiped when you exit this session.
       You must repeat this step at every session startup.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EOF
 
 # ── Clipboard helper (Termux only) ───────────────────────────────
-# This runs AFTER displaying the keys so the operator can read
-# them from the terminal regardless of clipboard availability.
+# termux-clipboard-set runs on the Android host regardless of which
+# proot-distro is active, so this still works inside Alpine proot.
 if command -v termux-clipboard-set >/dev/null 2>&1; then
     cat "$ORP_IDENTITY_DIR/session.pub" | termux-clipboard-set
     termux-toast "SSH public key copied to clipboard" 2>/dev/null || true
@@ -103,5 +119,4 @@ printf "  Auth:    Client certificate required (operator_01.p12)\n"
 printf "  Stop:    Press Ctrl+C\n\n"
 
 # orp_launch_engine uses exec — replaces this shell with Gunicorn.
-# The trap fires when Gunicorn exits, running orp_cleanup().
 orp_launch_engine
