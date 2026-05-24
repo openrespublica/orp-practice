@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # nginx-setup.sh — Alpine Nginx mTLS Gateway Configuration
 set -eu
 
@@ -12,12 +12,12 @@ NGINX_CONF_TPL="$SCRIPT_DIR/orp_engine.conf.tpl"
 
 echo "[*] Initializing ORP Engine Nginx Gateway Setup"
 
-# Verify dependencies (Alpine uses gettext for envsubst)                                  if ! command -v envsubst >/dev/null 2>&1 || ! command -v nginx >/dev/null 2>&1; then
+# Verify dependencies (Alpine uses gettext for envsubst)
+if ! command -v envsubst >/dev/null 2>&1 || ! command -v nginx >/dev/null 2>&1; then
     echo "[*] Installing Nginx and Gettext..."
     apk add --no-cache nginx gettext
 fi
-
-# Verify Certificates
+                                                                                          # Verify Certificates
 for cert in "$PKI_DIR/orp_server.crt" "$PKI_DIR/orp_server.key" "$PKI_DIR/sovereign_root.crt"; do
     if [ ! -f "$cert" ]; then
         echo "[✘] ERROR: Missing $cert. Run orp-pki-setup.sh first." >&2
@@ -30,7 +30,8 @@ if [ ! -f "$NGINX_CONF_TPL" ]; then
     exit 1
 fi
 
-echo "[*] Generating Nginx configuration..."                                              export PKI_DIR FLASK_PORT
+echo "[*] Generating Nginx configuration..."
+export PKI_DIR FLASK_PORT
 envsubst '${PKI_DIR} ${FLASK_PORT}' < "$NGINX_CONF_TPL" > "$NGINX_CONF_DEST"
 
 # Remove Alpine's default site configuration
