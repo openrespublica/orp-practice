@@ -13,19 +13,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; GOLD='\033[0;33m'
 BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
-ok()   { printf "${GREEN}[✔]${NC} %s\n" "$1"; }
-info() { printf "${CYAN}[*]${NC} %s\n" "$1"; }
-warn() { printf "${GOLD}[!]${NC} %s\n" "$1"; }
+
+# SC2059 Fix: Use %b to safely evaluate color escape sequences
+ok()   { printf '%b[✔]%b %s\n' "$GREEN" "$NC" "$1"; }
+info() { printf '%b[*]%b %s\n' "$CYAN" "$NC" "$1"; }
+warn() { printf '%b[!]%b %s\n' "$GOLD" "$NC" "$1"; }
 
 clear
-printf "${BOLD}${CYAN}"
+# SC2059 Fix: Pass color variables as formatting arguments
+printf '%b' "${BOLD}${CYAN}"
 cat <<'BANNER'
   ╔══════════════════════════════════════════════════════════╗
-  ║     ORP ENGINE — Repository Structure Initialization    ║
+  ║    ORP ENGINE — Repository Structure Initialization    ║
   ╚══════════════════════════════════════════════════════════╝
 BANNER
-printf "${NC}\n"
-printf "  ${DIM}Repository root: %s${NC}\n\n" "$SCRIPT_DIR"
+printf '%b\n' "${NC}"
+printf "  %bRepository root: %s%b\n\n" "$DIM" "$SCRIPT_DIR" "$NC"
 
 # ── ORP Engine directory structure ───────────────────────────────
 # This matches the actual structure main.py and Flask expect.
@@ -165,22 +168,26 @@ fi
 info "Staging initial files..."
 
 git add .gitignore                       2>/dev/null || true
-git add docs/.gitkeep                   2>/dev/null || true
-git add docs/records/.gitkeep           2>/dev/null || true
-git add docs/records/manifest.json      2>/dev/null || true
-git add static/css/.gitkeep             2>/dev/null || true
-git add static/js/.gitkeep              2>/dev/null || true
+git add docs/.gitkeep                    2>/dev/null || true
+git add docs/records/.gitkeep            2>/dev/null || true
+git add docs/records/manifest.json       2>/dev/null || true
+git add static/css/.gitkeep              2>/dev/null || true
+git add static/js/.gitkeep               2>/dev/null || true
 
 if git diff --cached --quiet 2>/dev/null; then
     warn "No new changes to commit."
 else
-    git commit -m "init: repository structure" 2>/dev/null \
-        && ok "Initial commit created." \
-        || warn "Commit skipped (git user may not be configured yet)."
+    # SC2015 Fix: Replaced && || with a proper if/else statement
+    if git commit -m "init: repository structure" 2>/dev/null; then
+        ok "Initial commit created."
+    else
+        warn "Commit skipped (git user may not be configured yet)."
+    fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────
-printf "\n${BOLD}${CYAN}━━━ Repository Structure ━━━${NC}\n\n"
+# SC2059 Fix: Safe variable handling for printf
+printf '\n%b━━━ Repository Structure ━━━%b\n\n' "${BOLD}${CYAN}" "${NC}"
 printf "  %s\n" "$SCRIPT_DIR"
 printf "  ├── docs/\n"
 printf "  │   ├── .gitkeep\n"

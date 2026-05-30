@@ -3,6 +3,7 @@
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=1091
 [ -f "$SCRIPT_DIR/.env" ] && . "$SCRIPT_DIR/.env"
 
 PKI_DIR="${PKI_DIR:-$HOME/.orp_engine/ssl}"
@@ -31,7 +32,9 @@ if [ ! -f "$NGINX_CONF_TPL" ]; then
 fi
 
 echo "[*] Generating Nginx configuration..."
+# shellcheck disable=SC2016
 export PKI_DIR FLASK_PORT
+# shellcheck disable=SC2016
 envsubst '${PKI_DIR} ${FLASK_PORT}' < "$NGINX_CONF_TPL" > "$NGINX_CONF_DEST"
 
 # Remove Alpine's default site configuration

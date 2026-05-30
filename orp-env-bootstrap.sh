@@ -13,20 +13,22 @@ ENV_FILE="$SCRIPT_DIR/.env"
 CYAN='\033[0;36m'; GOLD='\033[0;33m'; GREEN='\033[0;32m'
 DIM='\033[2m'; BOLD='\033[1m'; NC='\033[0m'
 
-section() { printf "\n${BOLD}${CYAN}━━━ %s ━━━${NC}\n\n" "$1"; }
-hint()    { printf "  ${DIM}%s${NC}\n" "$1"; }
-ok()      { printf "${GREEN}[✔]${NC} %s\n" "$1"; }
-warn()    { printf "${GOLD}[!]${NC} %s\n" "$1"; }
+# SC2059 Fixes: Use %b for colors and %s for variables
+section() { printf '\n%b━━━ %s ━━━%b\n\n' "${BOLD}${CYAN}" "$1" "${NC}"; }
+hint()    { printf '  %b%s%b\n' "${DIM}" "$1" "${NC}"; }
+ok()      { printf '%b[✔]%b %s\n' "${GREEN}" "${NC}" "$1"; }
+warn()    { printf '%b[!]%b %s\n' "${GOLD}" "${NC}" "$1"; }
+info()    { printf '%b[*]%b %s\n' "${CYAN}" "${NC}" "$1"; } # Added missing info function
 
 # ── Banner ────────────────────────────────────────────────────────
 clear
-printf "${BOLD}${CYAN}"
+printf '%b' "${BOLD}${CYAN}"
 cat <<'BANNER'
   ╔══════════════════════════════════════════════════════════╗
   ║      ORP ENGINE — ENVIRONMENT CONFIGURATION              ║
   ╚══════════════════════════════════════════════════════════╝
 BANNER
-printf "${NC}\n"
+printf '%b\n' "${NC}"
 
 # ── Check for existing .env ───────────────────────────────────────
 if [ -f "$ENV_FILE" ]; then
@@ -121,6 +123,7 @@ EOF
 chmod 600 "$ENV_FILE"
 ok ".env secured at $ENV_FILE"
 
-printf "\n${BOLD}${CYAN}━━━ Setup Ready ━━━${NC}\n"
-printf "  Database Name: ${BOLD}$IMMUDB_DB${NC}\n"
-printf "  GitHub Ledger: ${BOLD}$SETUP_GITHUB_PAGES${NC}\n\n"
+# SC2059 Fixes: Safe variable printing
+printf '\n%b━━━ Setup Ready ━━━%b\n' "${BOLD}${CYAN}" "${NC}"
+printf '  Database Name: %b%s%b\n' "${BOLD}" "$IMMUDB_DB" "${NC}"
+printf '  GitHub Ledger: %b%s%b\n\n' "${BOLD}" "$SETUP_GITHUB_PAGES" "${NC}"

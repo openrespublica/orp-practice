@@ -12,21 +12,25 @@ make --version
 clang --version
 go version                                                  
 mkdir -p "$HOME/bin"                                        
-# Clone immudb if not already present                       if [ ! -d "$HOME/immudb" ]; then
+# Clone immudb if not already present                       
+if [ ! -d "$HOME/immudb" ]; then
   echo "[*] Cloning immudb source..."
   git clone --depth=1 --branch v1.10.0 https://github.com/codenotary/immudb.git "$HOME/immudb"
 fi
-
+# shellcheck disable=SC1089
 cd "$HOME/immudb"
 
-# Build binaries only if missing                            if [ ! -f "$HOME/bin/immudb" ] || [ ! -f "$HOME/bin/immuclient" ] || [ ! -f "$HOME/bin/immuadmin" ]; then
+# Build binaries only if missing                            
+if [ ! -f "$HOME/bin/immudb" ] || [ ! -f "$HOME/bin/immuclient" ] || [ ! -f "$HOME/bin/immuadmin" ]; then
   echo "[*] Building immudb binaries..."
   make immudb immuclient immuadmin
-  cp immudb immuclient immuadmin "$HOME/bin/"               else
+  cp immudb immuclient immuadmin "$HOME/bin/"               
+else
   echo "[*] Binaries already present, skipping rebuild."
 fi
-                                                            echo "[*] Checking immudb binary versions..."
+echo "[*] Checking immudb binary versions..."
 "$HOME/bin/immudb" version || true
-"$HOME/bin/immuclient" version || true                      "$HOME/bin/immuadmin" version || true
+"$HOME/bin/immuclient" version || true                      
+"$HOME/bin/immuadmin" version || true
 
 echo "[*] Build and version check complete."

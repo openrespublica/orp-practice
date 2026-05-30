@@ -3,6 +3,7 @@
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
 [ -f "$SCRIPT_DIR/.env" ] && . "$SCRIPT_DIR/.env"
 
 PKI_DIR="${PKI_DIR:-$HOME/.orp_engine/ssl}"
