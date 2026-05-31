@@ -1,25 +1,32 @@
-# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v4)
+# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v3)
 # Part of the OpenResPublica TruthChain stack.
 # Must be launched via run_orp.sh — never directly.
 
 # ── IMPORTS ──────────────────────────────────────────────────────
-import hashlib
-import io
-import os
-import json
-import datetime
-import threading
-import signal
-import time
-import fcntl
-import subprocess
-import logging
+import hashlib      # SHA-256 fingerprinting
+import io           # in-memory byte streams (PDF processing)
+import os           # environment variables, file paths, signals
+import json         # reading and writing JSON records
+import datetime     # timestamps for records
+import threading    # Lock() for control numbers, Timer for shutdown
+import signal       # graceful shutdown on SIGINT / SIGTERM
+import time         # retry delays
+import fcntl        # file locking for process safety
+import subprocess   # git commands
+import logging      # structured logging
 
-import gnupg
-import pytz
-import qrcode
+# Third-party — all listed in requirements.txt.
+import gnupg        # GPG signing of audit records
+import pytz         # Philippine timezone (Asia/Manila)
+import qrcode       # QR code generation
 
-from flask import Flask, request, send_file, jsonify, render_template
+from flask import (
+    Flask,
+    request,
+    send_file,
+    jsonify,
+    render_template
+)
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -29,9 +36,10 @@ from immudb.client import ImmudbClient
 from dotenv import load_dotenv
 import getpass
 
+# Load .env file into environment before reading any variables.
 load_dotenv()
 
-# ── LOGGING ──────────────────────────────────────────────────────
+# ── LOGGING CONFIGURATION ────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -52,9 +60,9 @@ if not all([GPG_HOME, GPG_EMAIL, SSH_AUTH_SOCK]):
     logger.critical(f"  - SSH_SOCK: {'✅' if SSH_AUTH_SOCK else '❌ MISSING'}")
     raise RuntimeError("Engine must be launched via run_orp.sh or run_orp-gum.sh")
 
-if not GPG_HOME.startswith("/dev/shm") and not GPG_HOME.startswith("/tmp"):
-    logger.critical("VULNERABILITY: GNUPGHOME must be in /dev/shm or /tmp (ephemeral)")
-    raise RuntimeError("Launch via the boot script with ephemeral keyring")
+if not GPG_HOME.startswith("/dev/shm"):
+    logger.critical("VULNERABILITY: GNUPGHOME must be in RAM (/dev/shm)")
+    raise RuntimeError("Launch via the boot script with RAM-based keyring")
 
 gpg = gnupg.GPG(gnupghome=GPG_HOME)
 gpg.decode_errors = 'replace'
@@ -79,7 +87,7 @@ CONTROL_FILE = os.path.join(REPO_PATH, "docs", "control_number.txt")
 
 VAULT_MAX_RETRIES = int(os.getenv("VAULT_MAX_RETRIES", "3"))
 VAULT_RETRY_DELAY = int(os.getenv("VAULT_RETRY_DELAY", "1"))
-MAX_PDF_SIZE      = int(os.getenv("MAX_PDF_SIZE", str(20 * 1024 * 1024)))
+MAX_PDF_SIZE = int(os.getenv("MAX_PDF_SIZE", str(20 * 1024 * 1024)))
 
 
 # ── 3. FLASK INITIALIZATION ───────────────────────────────────────
@@ -98,8 +106,12 @@ logger.info(f"✅ Records directory ready: {RECORDS_DIR}")
 _vault_password: str | None = None
 
 def get_client() -> ImmudbClient:
+    """
+    Connect to the immudb vault with explicit host:port parsing.
+    Prompts for password on first call only.
+    """
     global _vault_password
-
+    
     if ":" in IMMUDB_HOST:
         host, port = IMMUDB_HOST.rsplit(":", 1)
         try:
@@ -134,6 +146,10 @@ except Exception as e:
 
 # ── 5. GRACEFUL SHUTDOWN ──────────────────────────────────────────
 def graceful_shutdown(signum, frame):
+    """
+    Called when SIGINT or SIGTERM is received.
+    Logs out of immudb, then forces exit.
+    """
     logger.warning("Received shutdown signal — purging session...")
     try:
         client.logout()
@@ -149,10 +165,11 @@ signal.signal(signal.SIGTERM, graceful_shutdown)
 # ── 6. CRYPTO & DATA UTILITIES ───────────────────────────────────
 
 def sign_json_data(record: dict) -> dict | None:
+    """Signs the audit record JSON using the ephemeral GPG key in RAM."""
     try:
         data_str = json.dumps(record, sort_keys=True)
         sig      = gpg.sign(data_str, keyid=GPG_EMAIL)
-
+        
         if sig.status != "signature created":
             logger.error(f"GPG signing failed: {sig.stderr}")
             return None
@@ -166,12 +183,12 @@ def sign_json_data(record: dict) -> dict | None:
         logger.error(f"Error during JSON signing: {e}")
         return None
 
-
 def next_control_number() -> str:
+    """Issues the next sequential control number for this calendar year."""
     with ctrl_lock:
         local_tz     = pytz.timezone(TZ_NAME)
         current_year = str(datetime.datetime.now(local_tz).year)
-
+        
         if not os.path.exists(CONTROL_FILE):
             try:
                 fd = os.open(CONTROL_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -206,6 +223,7 @@ def next_control_number() -> str:
 
 
 def generate_qr(sha256_hash: str) -> tuple[io.BytesIO, str]:
+    """Generates a QR code linking to the public verification portal."""
     try:
         qr_url = f"{GITHUB_PORTAL}?hash={sha256_hash}"
         qr     = qrcode.QRCode(
@@ -233,6 +251,7 @@ def add_footer(
     timestamp:      str,
     control_number: str,
 ) -> io.BytesIO:
+    """Stamps every page of the PDF with metadata footer and QR code."""
     try:
         reader   = PdfReader(io.BytesIO(original_pdf))
         writer   = PdfWriter()
@@ -275,6 +294,7 @@ def add_footer(
 
 
 def update_manifest(record: dict) -> None:
+    """Prepends the new record to manifest.json (newest first)."""
     try:
         manifest_path = os.path.join(RECORDS_DIR, "manifest.json")
         records: list = []
@@ -300,67 +320,33 @@ def update_manifest(record: dict) -> None:
 
 def run_git_command(cmd: list, description: str) -> bool:
     """
-    Runs a git command using the ephemeral SSH agent from the boot
-    script. SSH_AUTH_SOCK and GNUPGHOME are read fresh on every call
-    so that Gunicorn worker forks always see the correct live values
-    rather than a snapshot taken at import time.
+    Runs a git command with an isolated, defensive environment.
     """
     try:
         git_env = os.environ.copy()
-
-        # ── Re-read agent socket path at call time ────────────────
-        # os.environ may be stale in a forked Gunicorn worker.
-        # The boot script exports both vars; if they drifted, reading
-        # /proc/self/environ would give the original exec values —
-        # but relying on the module-level constants (set at startup
-        # from the exec'd environment) is correct here because exec
-        # replaces the process image, so worker forks inherit the
-        # right values.  We still override explicitly to be safe.
-        live_ssh_sock = os.environ.get("SSH_AUTH_SOCK") or SSH_AUTH_SOCK
-        live_gpg_home = os.environ.get("GNUPGHOME")     or GPG_HOME
-
-        if not live_ssh_sock:
-            logger.error("SSH_AUTH_SOCK is unset — cannot reach gpg-agent")
+        
+        # 1. Ensure the SSH Agent is accessible
+        if "SSH_AUTH_SOCK" not in git_env:
+            logger.error("SSH_AUTH_SOCK not in environment — SSH will fail")
             return False
 
-        git_env["SSH_AUTH_SOCK"] = live_ssh_sock
-        git_env["GNUPGHOME"]     = live_gpg_home
-
-        logger.debug(f"SSH_AUTH_SOCK → {live_ssh_sock}")
-        logger.debug(f"GNUPGHOME     → {live_gpg_home}")
-
-        # ── SSH command ───────────────────────────────────────────
-        # BatchMode=yes  — never prompt; fail immediately if the
-        #                  agent key is not accepted. This prevents
-        #                  the 30-second hang seen when SSH falls
-        #                  back to a passphrase-protected disk key.
-        # IdentitiesOnly=yes — use ONLY what the agent offers;
-        #                      ignore ~/.ssh/id_* files entirely.
-        # IdentityAgent   — point explicitly at the gpg-agent SSH
-        #                   socket so the subprocess finds it even
-        #                   if SSH_AUTH_SOCK is not propagated by
-        #                   some intermediate layer.
+        # 2. Relaxed but secure SSH command
+        # Removed IdentityFile=/dev/null to avoid libcrypto errors.
+        # 'IdentitiesOnly=yes' forces SSH to use ONLY what is in the Agent.
         git_env["GIT_SSH_COMMAND"] = (
-            f"ssh "
-            f"-o BatchMode=yes "
-            f"-o StrictHostKeyChecking=no "
-            f"-o UserKnownHostsFile=/dev/null "
-            f"-o IdentitiesOnly=yes "
-            f"-o IdentityAgent={live_ssh_sock}"
+            "ssh -o StrictHostKeyChecking=no "
+            "-o UserKnownHostsFile=/dev/null "
+            "-o IdentitiesOnly=yes"
         )
 
-        # ── Defensive git wrapper ─────────────────────────────────
-        # commit.gpgsign=false  — the Python subprocess must never
-        #   attempt its own GPG commit signing; signing is done by
-        #   the shell-level git config set in orp_configure_git().
-        #   Forcing it off here avoids a second gpg-agent call that
-        #   would use a different GNUPGHOME context.
+        # 3. Create a defensive command wrapper
+        # We inject '-c' flags to override local/global configs that might be broken.
         defensive_cmd = [
-            "git",
-            "-c", "commit.gpgsign=false",
-            "-c", "user.email=engine@orp.ph",
-            "-c", "user.name=ORP Engine",
-        ] + cmd[1:]  # drop the leading 'git' from the caller's list
+            'git', 
+            '-c', 'commit.gpgsign=false',     # Force GPG signing OFF
+            '-c', 'user.email=engine@orp.ph', # Force identity locally
+            '-c', 'user.name=ORP Engine'      # Force identity locally
+        ] + cmd[1:] # Skip 'git' as we are replacing it with our wrapper
 
         logger.debug(f"Git command: {' '.join(defensive_cmd)}")
 
@@ -370,140 +356,99 @@ def run_git_command(cmd: list, description: str) -> bool:
             env=git_env,
             capture_output=True,
             text=True,
-            cwd=REPO_PATH,   # always run inside the repo; removes
-                             # the need for -C on every sub-command
-            timeout=30,
+            timeout=30
         )
-
-        if result.stdout.strip():
-            logger.debug(f"stdout: {result.stdout.strip()}")
 
         logger.info(f"✅ {description}")
         return True
 
-    except subprocess.TimeoutExpired:
-        # Distinct log message — previously this showed as a generic
-        # CalledProcessError which obscured the real cause.
-        logger.error(
-            f"❌ {description} — TIMED OUT after 30s. "
-            f"SSH_AUTH_SOCK={git_env.get('SSH_AUTH_SOCK', 'MISSING')} "
-            f"— verify the gpg-agent socket is reachable from this process."
-        )
-        return False
-
     except subprocess.CalledProcessError as e:
-        logger.error(f"❌ {description} — exit {e.returncode}")
-        if e.stderr:
-            logger.error(f"   stderr: {e.stderr[:500]}")
-        if e.stdout:
-            logger.debug(f"   stdout: {e.stdout[:200]}")
+        logger.error(f"❌ {description} — FAILED: {e.returncode}")
+        logger.error(f"stderr: {e.stderr[:500] if e.stderr else 'none'}")
         return False
-
     except Exception as e:
-        logger.error(f"❌ {description} — unexpected error: {e}")
+        logger.error(f"❌ {description} — ERROR: {e}")
         return False
-
-
-def _verify_ssh_agent(git_env: dict) -> None:
-    """
-    Diagnostic helper — logs which keys the SSH agent exposes to
-    the subprocess. Called once at the start of sync_to_github so
-    the operator can confirm the ephemeral key is visible.
-    Failures here are non-fatal; they only affect logging.
-    """
-    try:
-        result = subprocess.run(
-            ["ssh-add", "-l"],
-            env=git_env,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        keys = result.stdout.strip() or result.stderr.strip() or "(none)"
-        logger.info(f"SSH agent keys visible to subprocess:\n  {keys}")
-    except Exception as e:
-        logger.warning(f"Could not query SSH agent: {e}")
-
 
 def sync_to_github(json_path: str, record: dict) -> None:
     """
-    Background daemon thread: writes the manifest, commits the new
-    record JSON, and pushes to GitHub Pages over SSH.
-    Includes self-healing for rebase conflicts.
+    Runs in a background daemon thread.
+    Writes the manifest, commits the new record JSON, and pushes
+    to GitHub Pages using SSH. Includes self-healing for Git conflicts.
     """
     with git_lock:
         try:
             update_manifest(record)
             anchor_hash = os.path.basename(json_path).replace(".json", "")
 
-            logger.info(f"Starting git sync for {anchor_hash[:16]}...")
+            logger.info(f"Starting git sync for {anchor_hash}...")
 
-            # ── One-time diagnostic: confirm agent key is reachable ──
-            # Build a minimal env just for the check.
-            probe_env = os.environ.copy()
-            probe_env["SSH_AUTH_SOCK"] = (
-                os.environ.get("SSH_AUTH_SOCK") or SSH_AUTH_SOCK
-            )
-            _verify_ssh_agent(probe_env)
-
-            # ── Stage ─────────────────────────────────────────────
-            if not run_git_command(["git", "add", "."], "Stage files"):
-                return
-
-            # ── Commit ────────────────────────────────────────────
-            committed = run_git_command(
-                ["git", "commit", "-m", f"Audit: Anchor {anchor_hash}"],
-                "Commit changes",
-            )
-            if not committed:
-                logger.warning("Commit failed or nothing to commit — continuing to push")
-
-            # ── Fetch ─────────────────────────────────────────────
-            if not run_git_command(["git", "fetch", "origin"], "Fetch from remote"):
-                return
-
-            # ── Rebase ────────────────────────────────────────────
-            rebase_ok = run_git_command(
-                ["git", "pull", "--rebase", "origin", "main"],
-                "Rebase onto remote main",
-            )
-
-            # ── Self-healing on conflict ──────────────────────────
-            if not rebase_ok:
-                logger.warning("⚠️ Rebase conflict — initiating self-healing...")
-
-                run_git_command(
-                    ["git", "rebase", "--abort"],
-                    "Abort stuck rebase",
-                )
-                run_git_command(
-                    ["git", "merge", "origin/main", "-X", "ours", "--no-edit"],
-                    "Self-healing merge (ours)",
-                )
-                run_git_command(["git", "add", "."], "Stage conflict resolutions")
-                run_git_command(
-                    ["git", "commit", "-m", f"Auto-healed conflict for {anchor_hash}"],
-                    "Commit resolutions",
-                )
-                logger.info("✅ Self-healing complete")
-
-            # ── Push ──────────────────────────────────────────────
             if not run_git_command(
-                ["git", "push", "origin", "main"], "Push to remote"
+                ['git', '-C', REPO_PATH, 'add', '.'],
+                "Stage files"
             ):
                 return
 
-            logger.info(f"✅ TruthChain synchronized: {anchor_hash[:16]}...")
+            if not run_git_command(
+                ['git', '-C', REPO_PATH, 'commit', '-m', f"Audit: Anchor {anchor_hash}"],
+                "Commit changes"
+            ):
+                logger.warning("Commit failed or nothing to commit (may be OK)")
+
+            if not run_git_command(
+                ['git', '-C', REPO_PATH, 'fetch', 'origin'],
+                "Fetch from remote"
+            ):
+                return
+
+            rebase_success = run_git_command(
+                ['git', '-C', REPO_PATH, 'pull', '--rebase', 'origin', 'main'],
+                "Rebase onto remote main"
+            )
+
+            # 🛠️ SELF-HEALING BLOCK
+            if not rebase_success:
+                logger.warning("⚠️ Git conflict detected! Initiating self-healing sequence...")
+
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'rebase', '--abort'],
+                    "Abort stuck rebase"
+                )
+
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'merge', 'origin/main', '-X', 'ours', '--no-edit'],
+                    "Self-healing merge"
+                )
+
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'add', '.'],
+                    "Stage conflict resolutions"
+                )
+                run_git_command(
+                    ['git', '-C', REPO_PATH, 'commit', '-m', f"Auto-healed conflict for {anchor_hash}"],
+                    "Commit resolutions"
+                )
+
+                logger.info("✅ Self-healing successful.")
+
+            if not run_git_command(
+                ['git', '-C', REPO_PATH, 'push', 'origin', 'main'],
+                "Push to remote"
+            ):
+                return
+
+            logger.info(f"✅ TruthChain synchronized: {anchor_hash}")
 
         except Exception as e:
             logger.error(f"Sync thread error: {e}", exc_info=True)
 
 
 def start_sync(json_path: str, record: dict) -> None:
+    """Launches sync_to_github in a daemon thread."""
     threading.Thread(
         target=sync_to_github,
         args=(json_path, record),
-        daemon=True,
+        daemon=True
     ).start()
 
 
@@ -511,11 +456,13 @@ def start_sync(json_path: str, record: dict) -> None:
 
 @app.route("/")
 def home():
+    """Serves the operator portal."""
     return render_template("portal.html")
 
 
 @app.route("/cert_error.html")
 def cert_error():
+    """Fallback route for Nginx error_page 495/496 directive."""
     return (
         "<h1>Sovereign Identity Required</h1>"
         "<p>A valid operator certificate is required.</p>",
@@ -523,8 +470,9 @@ def cert_error():
     )
 
 
-@app.route("/lock_engine", methods=["POST"])
+@app.route('/lock_engine', methods=['POST'])
 def lock_engine():
+    """Secure kill switch — triggers graceful shutdown."""
     logger.warning("Lock signal received — initiating secure shutdown")
     threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
     return "Engine locked. RAM disk purged.", 200
@@ -532,13 +480,16 @@ def lock_engine():
 
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
+    """
+    Core route — PDF upload, hash, anchor, sign, stamp, publish.
+    """
     global client
 
     try:
-        # ── Step 1: Validate ─────────────────────────────────────
+        # ── Step 1: Validate ─────────────────────────────────────────
         file = request.files.get("document")
-        if not file or not file.filename.lower().endswith(".pdf"):
-            logger.warning(f"Invalid file: {file.filename if file else 'None'}")
+        if not file or not file.filename.lower().endswith('.pdf'):
+            logger.warning(f"Invalid file type: {file.filename if file else 'None'}")
             return "Only PDF files are accepted.", 400
 
         doc_type  = request.form.get("doc_type", "BARANGAY-CERT")
@@ -548,12 +499,12 @@ def upload_pdf():
             logger.warning(f"File too large: {len(pdf_bytes)} bytes")
             return "File exceeds maximum size (20MB).", 413
 
-        # ── Step 2: Fingerprint ──────────────────────────────────
+        # ── Step 2: Fingerprint ──────────────────────────────────────
         sha256_hash = hashlib.sha256(pdf_bytes).hexdigest()
         logger.info(f"Processing document: {sha256_hash[:16]}...")
 
-        # ── Step 3: Anchor to immudb with retry ──────────────────
-        tx         = None
+        # ── Step 3: Anchor to immudb with RETRY LOGIC ─────────────────
+        tx = None
         last_error = None
 
         for attempt in range(1, VAULT_MAX_RETRIES + 1):
@@ -568,32 +519,33 @@ def upload_pdf():
                     logger.warning(f"Vault error (attempt {attempt}): {e}")
                     logger.info(f"Retrying in {VAULT_RETRY_DELAY}s...")
                     time.sleep(VAULT_RETRY_DELAY)
+
                     try:
                         logger.info("Reconnecting to vault...")
                         client = get_client()
-                    except Exception as reconnect_err:
-                        logger.warning(f"Reconnection failed: {reconnect_err}")
-                        last_error = reconnect_err
+                    except Exception as reconnect_error:
+                        logger.warning(f"Reconnection failed: {reconnect_error}")
+                        last_error = reconnect_error
                 else:
                     logger.error(f"Vault unavailable after {VAULT_MAX_RETRIES} attempts")
 
         if tx is None:
             logger.error(f"Failed to anchor: {last_error}")
             return jsonify({
-                "status":  "ERROR",
+                "status": "ERROR",
                 "message": f"Failed to anchor hash after {VAULT_MAX_RETRIES} attempts",
-                "error":   str(last_error),
-                "sha256":  sha256_hash,
+                "error": str(last_error),
+                "sha256": sha256_hash
             }), 503
 
-        # ── Step 4: Control number & timestamp ───────────────────
+        # ── Step 4: Control number & timestamp ───────────────────────
         local_tz     = pytz.timezone(TZ_NAME)
         timestamp_ph = datetime.datetime.now(local_tz).strftime("%Y-%m-%d %I:%M %p PHT")
         control_no   = next_control_number()
         final_ctrl   = f"Verified_{control_no}-{doc_type}"
 
-        # ── Step 5: Assemble & sign the audit record ─────────────
-        operator_identity = request.headers.get("X-Operator-ID", "UNKNOWN")
+        # ── Step 5: Assemble & sign the audit record ─────────────────
+        operator_identity = request.headers.get('X-Operator-ID', 'UNKNOWN')
 
         record = {
             "status":                "VERIFIED ✅",
@@ -612,34 +564,34 @@ def upload_pdf():
         if pgp_sig:
             record["data_signature"] = pgp_sig
 
-        # ── Step 6: Save JSON record ──────────────────────────────
+        # ── Step 6: Save JSON record locally ─────────────────────────
         json_path = os.path.join(RECORDS_DIR, f"{sha256_hash}.json")
         with open(json_path, "w") as f:
             json.dump(record, f, indent=2)
 
-        # ── Step 7: Sync to GitHub (background) ──────────────────
+        # ── Step 7: Sync to GitHub (background) ──────────────────────
         start_sync(json_path, record)
 
-        # ── Step 8: Stamp the PDF ─────────────────────────────────
+        # ── Step 8: Stamp the PDF ────────────────────────────────────
         qr_buf, _       = generate_qr(sha256_hash)
         stamped_pdf_buf = add_footer(
             pdf_bytes, sha256_hash, qr_buf, timestamp_ph, final_ctrl
         )
 
-        # ── Step 9: Return stamped PDF ────────────────────────────
+        # ── Step 9: Return stamped PDF to browser ────────────────────
         logger.info(f"✅ Upload complete: {final_ctrl}")
         return send_file(
             stamped_pdf_buf,
             as_attachment=True,
-            download_name=f"{final_ctrl}.pdf",
+            download_name=f"{final_ctrl}.pdf"
         )
 
     except Exception as e:
         logger.error(f"Unhandled error in upload: {e}", exc_info=True)
         return jsonify({
-            "status":  "ERROR",
+            "status": "ERROR",
             "message": "An unexpected error occurred",
-            "error":   str(e),
+            "error": str(e)
         }), 500
 
 
