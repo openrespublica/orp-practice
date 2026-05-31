@@ -341,13 +341,19 @@ def run_git_command(cmd: list, description: str) -> bool:
         #                   if SSH_AUTH_SOCK is not propagated by
         #                   some intermediate layer.
         git_env["GIT_SSH_COMMAND"] = (
-            f"ssh "
-            f"-o BatchMode=yes "
-            f"-o StrictHostKeyChecking=no "
-            f"-o UserKnownHostsFile=/dev/null "
-            f"-o IdentitiesOnly=yes "
-            f"-o IdentityAgent={live_ssh_sock}"
+            "ssh -o BatchMode=yes "
+            "-o StrictHostKeyChecking=no "
+            "-o UserKnownHostsFile=/dev/null "
+            f"-o IdentityAgent={git_env['SSH_AUTH_SOCK']}"
         )
+        #git_env["GIT_SSH_COMMAND"] = (
+        #    f"ssh "
+        #    f"-o BatchMode=yes "
+        #    f"-o StrictHostKeyChecking=no "
+        #    f"-o UserKnownHostsFile=/dev/null "
+        #    f"-o IdentitiesOnly=yes "
+        #    f"-o IdentityAgent={live_ssh_sock}"
+        #)
 
         # ── Defensive git wrapper ─────────────────────────────────
         # commit.gpgsign=false  — the Python subprocess must never
@@ -358,8 +364,8 @@ def run_git_command(cmd: list, description: str) -> bool:
         defensive_cmd = [
             "git",
             "-c", "commit.gpgsign=false",
-            "-c", "user.email=engine@orp.ph",
-            "-c", "user.name=ORP Engine",
+            "-c", "user.email=marcofernandez0204@gmail.com",
+            "-c", "user.name=Shandy Nazareno",
         ] + cmd[1:]  # drop the leading 'git' from the caller's list
 
         logger.debug(f"Git command: {' '.join(defensive_cmd)}")

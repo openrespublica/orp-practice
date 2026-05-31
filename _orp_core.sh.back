@@ -26,8 +26,18 @@
 # ─────────────────────────────────────────────────────────────────
 
 # ── Alpine /dev/shm guard ─────────────────────────────────────────
+# In Termux proot-distro, /dev/shm is usually a directory on the
+# overlay filesystem, NOT a real tmpfs — writing there is the same
+# as writing to /tmp from a secrecy standpoint.  We detect this and
+# warn the operator so they can decide whether that is acceptable.
+#
+# To get a real tmpfs on Termux, run from the Termux host shell:
+#   mkdir -p /data/data/com.termux/files/usr/tmp/shm
+#   mount -t tmpfs -o size=32m tmpfs /dev/shm   # requires root
+#
 _orp_shm_init() {
     if [ -d /dev/shm ] && [ -w /dev/shm ]; then
+        # Verify it is actually a tmpfs (not just a directory).
         local fstype
         fstype=$(stat -f -c '%T' /dev/shm 2>/dev/null \
                || awk '$2=="/dev/shm"{print $3}' /proc/mounts 2>/dev/null \
@@ -35,7 +45,7 @@ _orp_shm_init() {
         if [ "$fstype" = "tmpfs" ]; then
             ORP_SHM_BASE="/dev/shm"
         else
-            ORP_SHM_BASE="/dev/shm"
+            ORP_SHM_BASE="/dev/shm"   # dir exists but may not be tmpfs
             printf '[!] WARNING: /dev/shm is not a tmpfs in this proot.\n'
             printf '    Ephemeral keys will be written to the overlay FS.\n'
             printf '    They will still be deleted on exit, but are NOT\n'
@@ -50,29 +60,37 @@ _orp_shm_init() {
     export ORP_SHM_BASE
 }
 
-# ── Port-check helper ─────────────────────────────────────────────
+# ── Port-check helper (replaces nc -z) ───────────────────────────
+# Uses the bash /dev/tcp built-in so we never depend on a specific
+# nc variant.  Returns 0 if the port is open, 1 otherwise.
 _port_open() {
     local host="$1" port="$2"
     (echo > /dev/tcp/"$host"/"$port") 2>/dev/null
 }
 
-# ── Process-check helper ──────────────────────────────────────────
+# ── Process-check helper (replaces pgrep -x) ─────────────────────
+# Returns 0 if a process whose argv[0] exactly matches $1 exists.
+# Falls back to ps when pgrep is absent.
 _proc_running() {
     local name="$1"
     if command -v pgrep >/dev/null 2>&1; then
         pgrep -x "$name" > /dev/null 2>&1
     else
-        ps -A -o comm= 2>/dev/null | grep -qx "$name"
+        ps -A -o comm= 2>/dev/null | pgrep -qx "$name"
     fi
 }
 
 # ── Privilege helper ──────────────────────────────────────────────
+# In Alpine proot you are almost always UID 0; sudo is usually
+# absent (and unneeded).  Exporting SUDO once at source-time is
+# cleaner than inlining the check in every nginx call.
 if [ "$(id -u)" = "0" ]; then
     SUDO=""
 elif command -v sudo >/dev/null 2>&1; then
     SUDO="sudo"
 else
-    SUDO=""
+    SUDO=""   # no sudo and not root — nginx calls may fail;
+              # orp_refresh_gateway() will surface the error.
 fi
 export SUDO
 
@@ -89,9 +107,10 @@ orp_load_env() {
     core_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
     if [ -f "$core_dir/.env" ]; then
-        set -a
+        set -a 
         # shellcheck disable=SC1091
-        source "$core_dir/.env"
+
+        source "$core_dir/.env" 
         set +a
     else
         orp_die ".env not found at $core_dir/.env
@@ -108,7 +127,9 @@ orp_load_env() {
   → Run ./immudb-setup-operator.sh to create it."
     fi
 
+    # Initialise the SHM base path now that env is loaded.
     _orp_shm_init
+
     printf '[✔] Environment loaded.\n'
 }
 
@@ -126,14 +147,20 @@ orp_die() {
 orp_cleanup() {
     printf '\n[!] Shutting down ORP Engine...\n'
 
+    # Stop immudb if we started it.
     if [ -n "${IMMUDB_PID:-}" ] && kill -0 "$IMMUDB_PID" 2>/dev/null; then
         printf '[*] Stopping immudb (PID %s)...\n' "$IMMUDB_PID"
         kill "$IMMUDB_PID" 2>/dev/null || true
         sleep 1
     fi
 
+    # Kill the GPG agent before wiping its home; otherwise the agent
+    # relaunches itself and recreates files before rm -rf completes.
     if [ -n "${GNUPGHOME:-}" ] && [ -d "$GNUPGHOME" ]; then
         printf '[*] Wiping ephemeral GPG keys from %s...\n' "$ORP_SHM_BASE"
+        # gpgconf --kill all may not honour GNUPGHOME in all Alpine
+        # gnupg builds; kill by socket path as a belt-and-suspenders
+        # measure.
         gpgconf --kill all 2>/dev/null || true
         local agent_sock="${GNUPGHOME}/S.gpg-agent"
         [ -S "$agent_sock" ] && \
@@ -142,6 +169,7 @@ orp_cleanup() {
         rm -rf "$GNUPGHOME"
     fi
 
+    # Wipe the exported public-key directory.
     local id_dir="${ORP_SHM_BASE}/orp_identity"
     [ -d "$id_dir" ] && rm -rf "$id_dir"
 
@@ -154,6 +182,8 @@ orp_cleanup() {
 orp_forge_identity() {
     printf '[*] Generating ephemeral Ed25519 session identity...\n'
 
+    # busybox mktemp does not accept -p <dir>; pass the full template
+    # path as a positional argument instead.
     export GNUPGHOME
     GNUPGHOME=$(mktemp -d "${ORP_SHM_BASE}/.orp-gpg-XXXXXX")
     chmod 700 "$GNUPGHOME"
@@ -164,17 +194,24 @@ allow-loopback-pinentry
 default-cache-ttl 86400
 GPGCONF
 
+    # Start the agent explicitly before trying to contact it.
+    # This is necessary on Alpine where there is no systemd user
+    # session to auto-launch the agent.
     gpg-agent --daemon \
         --homedir "$GNUPGHOME" \
         --enable-ssh-support \
         --allow-loopback-pinentry \
         > /dev/null 2>&1 || true
 
+    # Give the agent a moment to bind its socket.
     sleep 1
 
     gpg-connect-agent --homedir "$GNUPGHOME" reloadagent /bye \
         > /dev/null 2>&1 || true
 
+    # Derive the SSH socket path.  On Alpine proot /run/user/<uid>/
+    # frequently does not exist; gpgconf then falls back to
+    # $GNUPGHOME/S.gpg-agent.ssh.
     export SSH_AUTH_SOCK
     SSH_AUTH_SOCK=$(gpgconf --homedir "$GNUPGHOME" \
                        --list-dirs agent-ssh-socket 2>/dev/null \
@@ -195,11 +232,15 @@ EOF
         --batch --generate-key "$GNUPGHOME/gpg-gen-spec" \
         > /dev/null 2>&1
 
+    # Poll for the key — 10-second timeout.
+    # busybox sleep does not accept 0.5; use 1s intervals with 10
+    # iterations to preserve the same 10-second wall-clock limit.
     local i=0 KEYGRIP=""
     while [ -z "$KEYGRIP" ]; do
         sleep 1
         i=$((i + 1))
-        [ $i -ge 10 ] && orp_die "GPG key generation timed out after 10s."
+        [ $i -ge 10 ] && orp_die "GPG key generation timed out after 10s.
+  The system may be under heavy load. Retry with: ./run_orp.sh"
         KEYGRIP=$(gpg --homedir "$GNUPGHOME" \
                       --with-keygrip -K "$OPERATOR_GPG_EMAIL" 2>/dev/null \
                   | grep "Keygrip" | head -n1 | awk '{print $3}')
@@ -226,13 +267,6 @@ EOF
              | awk -F: '/^sec/{print $5; exit}')
     export KEY_ID
 
-    # Compute and export the fingerprint once so run_orp.sh and
-    # orp_verify_github_ssh can both display it without re-running
-    # ssh-keygen.
-    SESSION_KEY_FP=$(ssh-keygen -lf "$ORP_IDENTITY_DIR/session.pub" \
-                         2>/dev/null | awk '{print $2}')
-    export SESSION_KEY_FP
-
     printf '[✔] Ed25519 identity forged (expires in 24 hours).\n'
 }
 
@@ -244,6 +278,7 @@ orp_start_vault() {
 
     if _port_open 127.0.0.1 3322; then
         printf '[!] Vault already running — attaching.\n'
+        # ps-based PID lookup — pgrep -f may be absent on minimal Alpine.
         if command -v pgrep >/dev/null 2>&1; then
             IMMUDB_PID=$(pgrep -f "immudb" | head -n1 || true)
         else
@@ -263,6 +298,7 @@ orp_start_vault() {
             >> "$HOME/.orp_vault/immudb.log" 2>&1 &
         IMMUDB_PID=$!
 
+        # Poll — 10-second timeout with 1s busybox-safe intervals.
         local i=0
         while ! _port_open 127.0.0.1 3322; do
             sleep 1
@@ -284,6 +320,9 @@ orp_configure_git() {
     cd "$GITHUB_REPO_PATH" || \
         orp_die "Cannot cd to GITHUB_REPO_PATH: $GITHUB_REPO_PATH"
 
+    # Tell git which gpg binary and homedir to use.  On Alpine the
+    # binary is usually /usr/bin/gpg; gpg2 may not exist as a
+    # separate symlink.
     local gpg_bin
     gpg_bin=$(command -v gpg2 2>/dev/null || command -v gpg)
 
@@ -293,73 +332,19 @@ orp_configure_git() {
     git config --local commit.gpgsign   true
     git config --local gpg.program      "$gpg_bin"
 
+    # Pass GNUPGHOME via the git environment so the ephemeral
+    # keyring is used for every git gpg call in this session.
+    # (git does not have a native per-repo gpg homedir setting.)
     export GNUPGHOME
+
     printf '[✔] Git configured for signed commits.\n'
 }
 
 # ─────────────────────────────────────────────────────────────────
-# 6. GitHub SSH verification
-# ─────────────────────────────────────────────────────────────────
-orp_verify_github_ssh() {
-    printf '[*] Verifying SSH access to GitHub...\n'
-
-    local max_attempts=3
-    local i=1
-    local ssh_output
-
-    while [ $i -le $max_attempts ]; do
-        printf '    Attempt %d/%d — testing git@github.com...\n' "$i" "$max_attempts"
-
-        # GitHub always exits 1 even on success (no shell to open).
-        # The || true prevents set -e in the caller from aborting here.
-        ssh_output=$(
-            SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
-            ssh -o BatchMode=yes \
-                -o StrictHostKeyChecking=no \
-                -o UserKnownHostsFile=/dev/null \
-                -o IdentityAgent="$SSH_AUTH_SOCK" \
-                -T git@github.com 2>&1
-        ) || true
-        printf '    Response: %s\n' "$ssh_output"
-
-        if printf '%s' "$ssh_output" | grep -q "successfully authenticated"; then
-            printf '[✔] GitHub SSH access confirmed.\n'
-            return 0
-        fi
-
-        i=$((i + 1))
-        [ $i -le $max_attempts ] && sleep 2
-    done
-
-    orp_die "GitHub SSH authentication failed after $max_attempts attempts.
-
-  ── What went wrong ──────────────────────────────────────────────
-  GitHub rejected the session key. The most common cause is that
-  the key shown at check-in was not pasted into GitHub Settings,
-  or was added to the wrong account.
-
-  ── This session's key ───────────────────────────────────────────
-  Public key : $(cat "$ORP_IDENTITY_DIR/session.pub")
-  Fingerprint: ${SESSION_KEY_FP:-$(ssh-keygen -lf "$ORP_IDENTITY_DIR/session.pub" 2>/dev/null | awk '{print $2}')}
-
-  ── Required GitHub account ──────────────────────────────────────
-  The key must be added to the account that has PUSH ACCESS to:
-    $(git -C "$GITHUB_REPO_PATH" remote get-url origin 2>/dev/null || echo '(unknown remote)')
-
-  ── How to fix ───────────────────────────────────────────────────
-  1. Go to  https://github.com/settings/keys
-  2. Delete any stale ORP Engine key from a previous session.
-  3. Click 'New SSH Key':
-       Title:    ORP Engine - $(date +%Y-%m-%d)
-       Key type: Authentication Key
-       Key:      [paste the public key shown above]
-  4. Re-run:  ./run_orp.sh"
-}
-# ─────────────────────────────────────────────────────────────────
-# 7. Engine launch
+# 6. Engine launch
 # ─────────────────────────────────────────────────────────────────
 orp_launch_engine() {
-    # Re-derive the SSH socket in case it shifted during boot.
+    # Re-derive the SSH socket in case it shifted.
     export SSH_AUTH_SOCK
     SSH_AUTH_SOCK=$(gpgconf --homedir "$GNUPGHOME" \
                        --list-dirs agent-ssh-socket 2>/dev/null \
@@ -385,7 +370,7 @@ orp_launch_engine() {
 }
 
 # ─────────────────────────────────────────────────────────────────
-# 8. Nginx gateway
+# 7. Nginx gateway
 # ─────────────────────────────────────────────────────────────────
 orp_refresh_gateway() {
     printf '[*] Verifying Nginx mTLS gateway...\n'
@@ -396,11 +381,14 @@ orp_refresh_gateway() {
         return 0
     fi
 
+    #   /etc/nginx/conf.d/orp_engine.conf
     if ! doas nginx -t > /dev/null 2>&1; then
         doas nginx -t >&2
         orp_die "Nginx config is invalid. Fix: /etc/nginx/conf.d/orp_engine.conf"
     fi
 
+    # Alpine nginx does not use systemctl; use native signals.
+    # _proc_running uses ps as a pgrep fallback.
     if pgrep nginx >/dev/null; then
         printf '[*] Reloading Nginx config...\n'
         doas nginx -s reload
@@ -414,4 +402,39 @@ orp_refresh_gateway() {
         orp_die "Nginx failed to start. Run: doas nginx -t"
     fi
     printf '[✔] Gateway operational on :9443.\n'
+}
+
+# Add this to _orp_core.sh
+orp_verify_github_ssh() {
+    printf '[*] Verifying SSH access to GitHub...\n'
+    
+    local max_attempts=3
+    local i=1
+    
+    while [ $i -le $max_attempts ]; do
+        printf '    Attempt %d/%d...\n' "$i" "$max_attempts"
+        
+        if SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
+           ssh -o BatchMode=yes \
+               -o StrictHostKeyChecking=no \
+               -o UserKnownHostsFile=/dev/null \
+               -o IdentitiesOnly=yes \
+               -o IdentityAgent="$SSH_AUTH_SOCK" \
+               -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+            printf '[✔] GitHub SSH access confirmed.\n'
+            return 0
+        fi
+        
+        i=$((i + 1))
+        [ $i -le $max_attempts ] && sleep 2
+    done
+    
+    orp_die "GitHub SSH authentication failed after $max_attempts attempts.
+  The session key has NOT been added to GitHub, or was added to the wrong account.
+  
+  Key to add:  $(cat "$ORP_IDENTITY_DIR/session.pub")
+  Fingerprint: $(ssh-keygen -lf "$ORP_IDENTITY_DIR/session.pub" 2>/dev/null | awk '{print $2}')
+  Add here:    https://github.com/settings/keys
+  
+  After adding the key, re-run: ./run_orp.sh"
 }
