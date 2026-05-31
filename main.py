@@ -320,29 +320,38 @@ def update_manifest(record: dict) -> None:
 
 def run_git_command(cmd: list, description: str) -> bool:
     """
-    Runs a git command with proper SSH environment.
+    Runs a git command with an isolated, defensive environment.
     """
     try:
         git_env = os.environ.copy()
-
-        # CRITICAL: Ensure SSH_AUTH_SOCK is set so git uses SSH agent
-        if not git_env.get("SSH_AUTH_SOCK"):
+        
+        # 1. Ensure the SSH Agent is accessible
+        if "SSH_AUTH_SOCK" not in git_env:
             logger.error("SSH_AUTH_SOCK not in environment — SSH will fail")
             return False
 
-        # Configure SSH to use the gpg-agent socket
+        # 2. Relaxed but secure SSH command
+        # Removed IdentityFile=/dev/null to avoid libcrypto errors.
+        # 'IdentitiesOnly=yes' forces SSH to use ONLY what is in the Agent.
         git_env["GIT_SSH_COMMAND"] = (
             "ssh -o StrictHostKeyChecking=no "
             "-o UserKnownHostsFile=/dev/null "
-            "-o IdentityFile=/dev/null "  # Don't use default keys
-            "-o IdentitiesOnly=yes "       # Use only SSH agent
+            "-o IdentitiesOnly=yes"
         )
 
-        logger.debug(f"Git command: {' '.join(cmd)}")
-        logger.debug(f"SSH_AUTH_SOCK: {git_env.get('SSH_AUTH_SOCK')}")
+        # 3. Create a defensive command wrapper
+        # We inject '-c' flags to override local/global configs that might be broken.
+        defensive_cmd = [
+            'git', 
+            '-c', 'commit.gpgsign=false',     # Force GPG signing OFF
+            '-c', 'user.email=engine@orp.ph', # Force identity locally
+            '-c', 'user.name=ORP Engine'      # Force identity locally
+        ] + cmd[1:] # Skip 'git' as we are replacing it with our wrapper
+
+        logger.debug(f"Git command: {' '.join(defensive_cmd)}")
 
         result = subprocess.run(
-            cmd,
+            defensive_cmd,
             check=True,
             env=git_env,
             capture_output=True,
@@ -351,22 +360,15 @@ def run_git_command(cmd: list, description: str) -> bool:
         )
 
         logger.info(f"✅ {description}")
-        if result.stdout:
-            logger.debug(f"stdout: {result.stdout[:200]}")
         return True
 
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"❌ {description} — TIMEOUT: {e}")
-        return False
     except subprocess.CalledProcessError as e:
         logger.error(f"❌ {description} — FAILED: {e.returncode}")
         logger.error(f"stderr: {e.stderr[:500] if e.stderr else 'none'}")
-        logger.error(f"stdout: {e.stdout[:500] if e.stdout else 'none'}")
         return False
     except Exception as e:
         logger.error(f"❌ {description} — ERROR: {e}")
         return False
-
 
 def sync_to_github(json_path: str, record: dict) -> None:
     """
