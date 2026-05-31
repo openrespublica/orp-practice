@@ -49,23 +49,18 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; GOLD='\033[0;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 
 hdr() {
-    printf "\n${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}\n"
-    printf "${BOLD}${CYAN}║  %-40s║${NC}\n" "$1"
-    printf "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}\n"
+    printf "\n%b%b╔══════════════════════════════════════════╗%b\n" "$BOLD" "$CYAN" "$NC"
+    printf "%b%b║  %-40s║%b\n" "$BOLD" "$CYAN" "$1" "$NC"
+    printf "%b%b╚══════════════════════════════════════════╝%b\n" "$BOLD" "$CYAN" "$NC"
 }
-ok()    { printf "${GREEN}[✔]${NC} %s\n" "$1" | tee -a "$LOG_FILE"; }
-info()  { printf "${CYAN}[*]${NC} %s\n" "$1" | tee -a "$LOG_FILE"; }
-warn()  { printf "${GOLD}[!]${NC} %s\n" "$1" | tee -a "$LOG_FILE"; }
-die()   { printf "${RED}[✘] ERROR: %s${NC}\n" "$1" >&2; log "ERROR: $1"; exit 1; }
+ok()    { printf "%b[✔]%b %s\n" "$GREEN" "$NC" "$1" | tee -a "$LOG_FILE"; }
+info()  { printf "%b[*]%b %s\n" "$CYAN" "$NC" "$1" | tee -a "$LOG_FILE"; }
+warn()  { printf "%b[!]%b %s\n" "$GOLD" "$NC" "$1" | tee -a "$LOG_FILE"; }
+die()   { printf "%b[✘] ERROR: %s%b\n" "$RED" "$1" "$NC" >&2; log "ERROR: $1"; exit 1; }
 log()   { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"; }
-dim()   { printf "  ${DIM}%s${NC}\n" "$1"; }
+dim()   { printf "  %b%s%b\n" "$DIM" "$1" "$NC"; }
 
 # ── Step registry ─────────────────────────────────────────────────
-# Format: STEPS[N]="Description|script.sh|skip_sentinel"
-# skip_sentinel: path whose existence means "already done".
-#   Use "" to mean "never auto-skip" (always runs unless --skip'd).
-#   Variables in skip_sentinel are evaluated at registration time,
-#   so $HOME and $SCRIPT_DIR expand correctly here.
 declare -A STEPS
 declare -A STEP_SCRIPTS
 declare -A STEP_SENTINELS
@@ -80,19 +75,24 @@ _register_step() {
 }
 
 # Load .env early so $PKI_DIR is available for sentinel paths.
-[ -f "$ENV_FILE" ] && { set -a; source "$ENV_FILE"; set +a; } || true
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
+
 PKI_DIR_DEFAULT="$HOME/.orp_engine/ssl"
 PKI_DIR="${PKI_DIR:-$PKI_DIR_DEFAULT}"
 
-_register_step 1 "Timezone (Asia/Manila)"              "orp-timezone-setup.sh"       ""
-_register_step 2 "Environment Configuration (.env)"   "orp-env-bootstrap.sh"        "$ENV_FILE"
-_register_step 3 "Python Virtualenv + Dependencies"   "python_prep.sh"              "$SCRIPT_DIR/.venv"
-_register_step 4 "immudb Binary Build"                "immudb_setup.sh"             "$HOME/bin/immudb"
-_register_step 5 "immudb Operator Database + Secrets" "immudb-setup-operator.sh"    "$HOME/.identity/db_secrets.env"
-_register_step 6 "Sovereign PKI (mTLS Certificates)"  "orp-pki-setup.sh"            "${PKI_DIR}/sovereign_root.crt"
-_register_step 7 "Nginx mTLS Gateway"                 "nginx-setup.sh"              ""
-_register_step 8 "Repository Directory Structure"     "repo-init.sh"               "$SCRIPT_DIR/docs/records/manifest.json"
-_register_step 9 "GitHub Pages Ledger"                "github-pages-setup.sh"       ""
+_register_step 1 "Timezone (Asia/Manila)"               "orp-timezone-setup.sh"       ""
+_register_step 2 "Environment Configuration (.env)"     "orp-env-bootstrap.sh"        "$ENV_FILE"
+_register_step 3 "Python Virtualenv + Dependencies"     "python_prep.sh"              "$SCRIPT_DIR/.venv"
+_register_step 4 "immudb Binary Build"                  "immudb_setup.sh"             "$HOME/bin/immudb"
+_register_step 5 "immudb Operator Database + Secrets"   "immudb-setup-operator.sh"    "$HOME/.identity/db_secrets.env"
+_register_step 6 "Sovereign PKI (mTLS Certificates)"    "orp-pki-setup.sh"            "${PKI_DIR}/sovereign_root.crt"
+_register_step 7 "Nginx mTLS Gateway"                   "nginx-setup.sh"              ""
+_register_step 8 "Repository Directory Structure"       "repo-init.sh"                "$SCRIPT_DIR/docs/records/manifest.json"
 
 TOTAL_STEPS=${#STEP_ORDER[@]}
 
@@ -206,8 +206,8 @@ _should_run() {
 # ── --list ────────────────────────────────────────────────────────
 if $OPT_LIST; then
     clear
-    printf "${BOLD}${CYAN}  ORP Engine Bootstrap — Step Registry${NC}\n\n"
-    printf "  ${BOLD}%-4s %-42s %-12s %s${NC}\n" "Step" "Description" "Status" "Skip Sentinel"
+    printf "%b%b  ORP Engine Bootstrap — Step Registry%b\n\n" "$BOLD" "$CYAN" "$NC"
+    printf "  %b%-4s %-42s %-12s %s%b\n" "$BOLD" "Step" "Description" "Status" "Skip Sentinel" "$NC"
     printf "  %s\n" "$(printf '%.0s─' {1..90})"
     for num in "${STEP_ORDER[@]}"; do
         desc="${STEPS[$num]}"
@@ -220,12 +220,12 @@ if $OPT_LIST; then
             status="${GOLD}pending${NC}"
         fi
         sentinel_display="${sentinel:-  (always runs)}"
-        printf "  ${BOLD}%2s${NC}   %-42s " "$num" "$desc"
-        printf "${status}"
-        printf "  ${DIM}%s${NC}\n" "$(basename "$sentinel_display")"
+        printf "  %b%2s%b   %-42s " "$BOLD" "$num" "$NC" "$desc"
+        printf "%b" "${status}"
+        printf "  %b%s%b\n" "$DIM" "$(basename "$sentinel_display")" "$NC"
     done
     printf "\n"
-    printf "  ${DIM}State file: $STATE_FILE${NC}\n\n"
+    printf "  %bState file: %s%b\n\n" "$DIM" "$STATE_FILE" "$NC"
     exit 0
 fi
 
@@ -244,23 +244,23 @@ _verify_scripts() {
 
 # ── Banner ────────────────────────────────────────────────────────
 clear
-printf "${BOLD}${CYAN}"
+printf "%b%b" "$BOLD" "$CYAN"
 cat <<'BANNER'
   ╔═══════════════════════════════════════════════════════════╗
-  ║    OPENRESPUBLICA — ORP ENGINE MASTER BOOTSTRAP          ║
+  ║    OPENRESPUBLICA — ORP ENGINE MASTER BOOTSTRAP           ║
   ║    TruthChain Sovereign Document Issuance System         ║
   ╚═══════════════════════════════════════════════════════════╝
 BANNER
-printf "${NC}"
+printf "%b" "$NC"
 
-printf "\n  ${DIM}Ubuntu WSL2 (Windows) · Termux proot-distro (Android)${NC}\n"
-printf "\n  ${BOLD}Log:${NC} %s\n" "$LOG_FILE"
+printf "\n  %bUbuntu WSL2 (Windows) · Termux proot-distro (Android)%b\n" "$DIM" "$NC"
+printf "\n  %bLog:%b %s\n" "$BOLD" "$NC" "$LOG_FILE"
 
 # Show active flags
-if $OPT_DRY_RUN; then printf "  ${GOLD}Mode: DRY RUN — nothing will be executed${NC}\n"; fi
-[ -n "$OPT_ONLY" ] && printf "  ${GOLD}Only steps: %s${NC}\n" "$OPT_ONLY"
-[ -n "$OPT_SKIP" ] && printf "  ${GOLD}Skipping steps: %s${NC}\n" "$OPT_SKIP"
-[ "$OPT_FROM" -gt 0 ] && printf "  ${GOLD}Starting from step: %s${NC}\n" "$OPT_FROM"
+if $OPT_DRY_RUN; then printf "  %bMode: DRY RUN — nothing will be executed%b\n" "$GOLD" "$NC"; fi
+[ -n "$OPT_ONLY" ] && printf "  %bOnly steps: %s%b\n" "$GOLD" "$OPT_ONLY" "$NC"
+[ -n "$OPT_SKIP" ] && printf "  %bSkipping steps: %s%b\n" "$GOLD" "$OPT_SKIP" "$NC"
+[ "$OPT_FROM" -gt 0 ] && printf "  %bStarting from step: %s%b\n" "$GOLD" "$OPT_FROM" "$NC"
 printf "\n"
 
 # ── OS check ─────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ run_step() {
 
     # ── Dry run ───────────────────────────────────────────────────
     if $OPT_DRY_RUN; then
-        printf "  ${CYAN}[DRY RUN]${NC} Would execute: ${BOLD}%s${NC}\n\n" "$script"
+        printf "  %b[DRY RUN]%b Would execute: %b%s%b\n\n" "$CYAN" "$NC" "$BOLD" "$script" "$NC"
         (( STEPS_RUN++ )) || true
         return 0
     fi
@@ -345,7 +345,7 @@ run_step() {
 # ── Execute steps ─────────────────────────────────────────────────
 for num in "${STEP_ORDER[@]}"; do
     if ! _should_run "$num"; then
-        printf "\n${DIM}  [—] Step %s skipped: %s${NC}\n" "$num" "${STEPS[$num]}"
+        printf "\n%b  [—] Step %s skipped: %s%b\n" "$DIM" "$num" "${STEPS[$num]}" "$NC"
         log "SKIP: step $num — ${STEPS[$num]}"
         (( STEPS_SKIPPED++ )) || true
         continue
@@ -353,14 +353,16 @@ for num in "${STEP_ORDER[@]}"; do
     run_step "$num"
 done
 
-# ── Step 9 special: config.json for GitHub Pages ─────────────────
-# This runs as part of step 9, but we also write the canonical
-# config.json so docs/assets/config-loader.js has accurate data.
-if _should_run "9" && ! $OPT_DRY_RUN && [ -f "$ENV_FILE" ]; then
-    set -a; source "$ENV_FILE"; set +a
+# ── Step 8 special: config.json for Docs ─────────────────────────
+# Writing the canonical config.json for config-loader.js now happens
+# alongside the repository directory structure build.
+if _should_run "8" && ! $OPT_DRY_RUN && [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
 
-    if [ "${SETUP_GITHUB_PAGES:-n}" = "y" ] && [ -n "${GITHUB_REPO_PATH:-}" ] \
-       && [ -d "$GITHUB_REPO_PATH/docs" ]; then
+    if [ -n "${GITHUB_REPO_PATH:-}" ] && [ -d "$GITHUB_REPO_PATH/docs" ]; then
         info "Writing canonical config.json for config-loader.js..."
 
         PORTAL_URL="${GITHUB_PORTAL_URL:-https://${GITHUB_OWNER:-}.github.io/${GITHUB_PAGES_REPO:-}/verify.html}"
@@ -393,11 +395,11 @@ fi
 # ── Summary ───────────────────────────────────────────────────────
 hdr "Bootstrap Summary"
 printf "\n"
-printf "  ${BOLD}%-20s${NC} %d\n" "Steps executed:"     "$STEPS_RUN"
-printf "  ${BOLD}%-20s${NC} %d\n" "Steps skipped:"      "$STEPS_SKIPPED"
-printf "  ${BOLD}%-20s${NC} %d\n" "Already complete:"   "$STEPS_ALREADY_DONE"
-printf "  ${BOLD}%-20s${NC} %s\n" "Log file:"           "$LOG_FILE"
-printf "  ${BOLD}%-20s${NC} %s\n" "State file:"         "$STATE_FILE"
+printf "  %b%-20s%b %d\n" "$BOLD" "Steps executed:" "$NC"    "$STEPS_RUN"
+printf "  %b%-20s%b %d\n" "$BOLD" "Steps skipped:" "$NC"     "$STEPS_SKIPPED"
+printf "  %b%-20s%b %d\n" "$BOLD" "Already complete:" "$NC"  "$STEPS_ALREADY_DONE"
+printf "  %b%-20s%b %s\n" "$BOLD" "Log file:" "$NC"          "$LOG_FILE"
+printf "  %b%-20s%b %s\n" "$BOLD" "State file:" "$NC"        "$STATE_FILE"
 printf "\n"
 
 if $OPT_DRY_RUN; then
@@ -406,36 +408,41 @@ if $OPT_DRY_RUN; then
 fi
 
 # ── Load env for next steps display ──────────────────────────────
-[ -f "$ENV_FILE" ] && { set -a; source "$ENV_FILE"; set +a; } || true
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
 PKI_FINAL="${PKI_DIR:-$HOME/.orp_engine/ssl}"
 
 {
-    printf "  ${GOLD}Next steps:${NC}\n\n"
+    printf "  %bNext steps:%b\n\n" "$GOLD" "$NC"
 
-    printf "  ${GOLD}1.${NC} Install the operator certificate in your browser:\n\n"
-    printf "       Chrome / Edge:\n"
-    printf "         Settings → Privacy → Manage certificates → Import\n"
-    printf "         Select: ${BOLD}%s/operator_01.p12${NC}\n\n" "$PKI_FINAL"
-    printf "       Firefox:\n"
-    printf "         Settings → Privacy → View Certificates → Import\n"
-    printf "         Select: ${BOLD}%s/operator_01.p12${NC}\n\n" "$PKI_FINAL"
+    printf "  %b1.%b Install the operator certificate in your browser:\n\n" "$GOLD" "$NC"
+    printf "        Chrome / Edge:\n"
+    printf "          Settings → Privacy → Manage certificates → Import\n"
+    printf "          Select: %b%s/operator_01.p12%b\n\n" "$BOLD" "$PKI_FINAL" "$NC"
+    printf "        Firefox:\n"
+    printf "          Settings → Privacy → View Certificates → Import\n"
+    printf "          Select: %b%s/operator_01.p12%b\n\n" "$BOLD" "$PKI_FINAL" "$NC"
 
-    printf "  ${GOLD}2.${NC} Launch the engine:\n\n"
-    printf "         ${BOLD}./run_orp.sh${NC}\n\n"
+    printf "  %b2.%b Launch the engine:\n\n" "$GOLD" "$NC"
+    printf "          %b./run_orp.sh%b\n\n" "$BOLD" "$NC"
 
-    printf "  ${GOLD}3.${NC} Paste the session SSH key to GitHub:\n\n"
-    printf "         GitHub → Settings → SSH Keys → New SSH Key\n\n"
+    printf "  %b3.%b Paste the session SSH key to GitHub:\n\n" "$GOLD" "$NC"
+    printf "          GitHub → Settings → SSH Keys → New SSH Key\n\n"
 
-    printf "  ${GOLD}4.${NC} Open the portal:\n\n"
-    printf "         ${BOLD}https://localhost:9443${NC}\n\n"
+    printf "  %b4.%b Open the portal:\n\n" "$GOLD" "$NC"
+    printf "          %bhttps://localhost:9443%b\n\n" "$BOLD" "$NC"
 
-    printf "  ${GOLD}To re-run a specific step:${NC}\n"
-    printf "         ${BOLD}./master-bootstrap.sh --only N${NC}\n\n"
+    printf "  %bTo re-run a specific step:%b\n" "$GOLD" "$NC"
+    printf "          %b./master-bootstrap.sh --only N%b\n\n" "$BOLD" "$NC"
 
-    printf "  ${GOLD}To resume from a failure:${NC}\n"
-    printf "         ${BOLD}./master-bootstrap.sh --resume${NC}\n\n"
+    printf "  %bTo resume from a failure:%b\n" "$GOLD" "$NC"
+    printf "          %b./master-bootstrap.sh --resume%b\n\n" "$BOLD" "$NC"
 
-    printf "  ${DIM}Setup log: %s${NC}\n\n" "$LOG_FILE"
+    printf "  %bSetup log: %s%b\n\n" "$DIM" "$LOG_FILE" "$NC"
 } | tee -a "$LOG_FILE"
 
 log "Bootstrap complete."

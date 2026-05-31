@@ -76,8 +76,7 @@ _proc_running() {
     if command -v pgrep >/dev/null 2>&1; then
         pgrep -x "$name" > /dev/null 2>&1
     else
-        # shellcheck disable=SC2009
-        ps -A -o comm= 2>/dev/null | grep -qx "$name"
+        ps -A -o comm= 2>/dev/null | pgrep -qx "$name"
     fi
 }
 
@@ -106,21 +105,23 @@ chmod 700 "$HOME/.identity"
 orp_load_env() {
     local core_dir
     core_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    # shellcheck disable=SC1009
+
     if [ -f "$core_dir/.env" ]; then
         set -a 
         # shellcheck disable=SC1091
-        source "$core_dir/.env"
-        set +a  
+
+        source "$core_dir/.env" 
+        set +a
     else
         orp_die ".env not found at $core_dir/.env
   → Run ./orp-env-bootstrap.sh to create it."
     fi
 
-    # shellcheck disable=SC1091
     if [ -f "$HOME/.identity/db_secrets.env" ]; then
+        set -a
         # shellcheck disable=SC1091
-        set -a; source "$HOME/.identity/db_secrets.env"; set +a  
+        source "$HOME/.identity/db_secrets.env"
+        set +a
     else
         orp_die "db_secrets.env not found at ~/.identity/db_secrets.env
   → Run ./immudb-setup-operator.sh to create it."
@@ -131,6 +132,7 @@ orp_load_env() {
 
     printf '[✔] Environment loaded.\n'
 }
+
 # ─────────────────────────────────────────────────────────────────
 # Error handler
 # ─────────────────────────────────────────────────────────────────
@@ -170,7 +172,7 @@ orp_cleanup() {
     # Wipe the exported public-key directory.
     local id_dir="${ORP_SHM_BASE}/orp_identity"
     [ -d "$id_dir" ] && rm -rf "$id_dir"
-    
+
     printf '[✔] Session terminated. Keys wiped from %s.\n' "$ORP_SHM_BASE"
 }
 
@@ -180,8 +182,10 @@ orp_cleanup() {
 orp_forge_identity() {
     printf '[*] Generating ephemeral Ed25519 session identity...\n'
 
+    # busybox mktemp does not accept -p <dir>; pass the full template
+    # path as a positional argument instead.
     export GNUPGHOME
-    GNUPGHOME=$(mktemp -d /tmp/.orp-gpg-XXXXXX)
+    GNUPGHOME=$(mktemp -d "${ORP_SHM_BASE}/.orp-gpg-XXXXXX")
     chmod 700 "$GNUPGHOME"
 
     cat > "$GNUPGHOME/gpg-agent.conf" <<'GPGCONF'
@@ -190,29 +194,28 @@ allow-loopback-pinentry
 default-cache-ttl 86400
 GPGCONF
 
-    # Start the agent AFTER exporting GNUPGHOME — it reads the env var
-    # and creates its socket at $GNUPGHOME/S.gpg-agent.
-    # Do NOT pass --homedir; that flag conflicts with the env-var socket path
-    # on Alpine's gnupg build and causes the "No agent running" failure.
+    # Start the agent explicitly before trying to contact it.
+    # This is necessary on Alpine where there is no systemd user
+    # session to auto-launch the agent.
     gpg-agent --daemon \
+        --homedir "$GNUPGHOME" \
         --enable-ssh-support \
         --allow-loopback-pinentry \
         > /dev/null 2>&1 || true
 
-    # Wait for the socket file — not a port, just a filesystem entry.
-    local i=0
-    while [ ! -S "${GNUPGHOME}/S.gpg-agent" ]; do
-        sleep 1
-        i=$((i + 1))
-        [ $i -ge 10 ] && orp_die \
-            "gpg-agent socket not found after 10s.
-  Expected: ${GNUPGHOME}/S.gpg-agent
-  Check that gpg-agent is installed: command -v gpg-agent"
-    done
-    printf '[*] gpg-agent socket ready.\n'
+    # Give the agent a moment to bind its socket.
+    sleep 1
 
-    # SSH socket lives alongside the main socket.
-    export SSH_AUTH_SOCK="${GNUPGHOME}/S.gpg-agent.ssh"
+    gpg-connect-agent --homedir "$GNUPGHOME" reloadagent /bye \
+        > /dev/null 2>&1 || true
+
+    # Derive the SSH socket path.  On Alpine proot /run/user/<uid>/
+    # frequently does not exist; gpgconf then falls back to
+    # $GNUPGHOME/S.gpg-agent.ssh.
+    export SSH_AUTH_SOCK
+    SSH_AUTH_SOCK=$(gpgconf --homedir "$GNUPGHOME" \
+                       --list-dirs agent-ssh-socket 2>/dev/null \
+                   || echo "${GNUPGHOME}/S.gpg-agent.ssh")
 
     cat > "$GNUPGHOME/gpg-gen-spec" <<EOF
 Key-Type: EDDSA
@@ -224,32 +227,43 @@ Expire-Date: 1d
 %no-protection
 %commit
 EOF
-    
-    # stderr intentionally left open — surfacing gpg errors is essential.
-    gpg --batch --generate-key "$GNUPGHOME/gpg-gen-spec" > /dev/null \
-        || orp_die "GPG key generation failed (see error above)."
-        
-    # Poll for the key to appear in the keyring.
-    local KEYGRIP=""
-    i=0
+
+    gpg --homedir "$GNUPGHOME" \
+        --batch --generate-key "$GNUPGHOME/gpg-gen-spec" \
+        > /dev/null 2>&1
+
+    # Poll for the key — 10-second timeout.
+    # busybox sleep does not accept 0.5; use 1s intervals with 10
+    # iterations to preserve the same 10-second wall-clock limit.
+    local i=0 KEYGRIP=""
     while [ -z "$KEYGRIP" ]; do
         sleep 1
         i=$((i + 1))
-        [ $i -ge 10 ] && orp_die "GPG key not found in keyring after 10s."
-        KEYGRIP=$(gpg --with-keygrip -K "$OPERATOR_GPG_EMAIL" 2>/dev/null \
-                  | awk '/Keygrip/{print $3; exit}')
+        [ $i -ge 10 ] && orp_die "GPG key generation timed out after 10s.
+  The system may be under heavy load. Retry with: ./run_orp.sh"
+        KEYGRIP=$(gpg --homedir "$GNUPGHOME" \
+                      --with-keygrip -K "$OPERATOR_GPG_EMAIL" 2>/dev/null \
+                  | grep "Keygrip" | head -n1 | awk '{print $3}')
     done
 
     echo "$KEYGRIP 0" > "$GNUPGHOME/sshcontrol"
-    gpg-connect-agent updatestartuptty /bye > /dev/null 2>&1 || true
-    
+
+    gpg-connect-agent --homedir "$GNUPGHOME" updatestartuptty /bye \
+        > /dev/null 2>&1 || true
+
     export ORP_IDENTITY_DIR="${ORP_SHM_BASE}/orp_identity"
     mkdir -p "$ORP_IDENTITY_DIR"
-    
-    gpg --export-ssh-key "$OPERATOR_GPG_EMAIL" > "$ORP_IDENTITY_DIR/session.pub"
-    gpg --export --armor   "$OPERATOR_GPG_EMAIL" > "$ORP_IDENTITY_DIR/session.gpg"
 
-    KEY_ID=$(gpg --list-secret-keys --with-colons "$OPERATOR_GPG_EMAIL" \
+    gpg --homedir "$GNUPGHOME" \
+        --export-ssh-key "$OPERATOR_GPG_EMAIL" \
+        > "$ORP_IDENTITY_DIR/session.pub"
+
+    gpg --homedir "$GNUPGHOME" \
+        --export --armor "$OPERATOR_GPG_EMAIL" \
+        > "$ORP_IDENTITY_DIR/session.gpg"
+
+    KEY_ID=$(gpg --homedir "$GNUPGHOME" \
+                 --list-secret-keys --with-colons "$OPERATOR_GPG_EMAIL" \
              | awk -F: '/^sec/{print $5; exit}')
     export KEY_ID
 
@@ -317,7 +331,7 @@ orp_configure_git() {
     git config --local user.signingkey  "$KEY_ID"
     git config --local commit.gpgsign   true
     git config --local gpg.program      "$gpg_bin"
-    
+
     # Pass GNUPGHOME via the git environment so the ephemeral
     # keyring is used for every git gpg call in this session.
     # (git does not have a native per-repo gpg homedir setting.)
@@ -333,15 +347,15 @@ orp_launch_engine() {
     # Re-derive the SSH socket in case it shifted.
     export SSH_AUTH_SOCK
     SSH_AUTH_SOCK=$(gpgconf --homedir "$GNUPGHOME" \
-        --list-dirs agent-ssh-socket 2>/dev/null \
-        || echo "${GNUPGHOME}/S.gpg-agent.ssh")
+                       --list-dirs agent-ssh-socket 2>/dev/null \
+                   || echo "${GNUPGHOME}/S.gpg-agent.ssh")
     export GNUPGHOME
-    
+
     if [ ! -x "./.venv/bin/gunicorn" ]; then
         orp_die "Gunicorn not found in .venv
   Run: ./python_prep.sh to create the virtual environment."
     fi
-    
+
     local port="${FLASK_PORT:-5000}"
     printf '[*] Launching Gunicorn on 127.0.0.1:%s...\n' "$port"
 
@@ -367,28 +381,25 @@ orp_refresh_gateway() {
         return 0
     fi
 
-    # On Alpine proot the nginx config lives under /etc/nginx/.
-    # The site-specific conf is still expected at:
     #   /etc/nginx/conf.d/orp_engine.conf
-    if ! $SUDO nginx -t > /dev/null 2>&1; then
-        $SUDO nginx -t >&2
+    if ! doas nginx -t > /dev/null 2>&1; then
+        doas nginx -t >&2
         orp_die "Nginx config is invalid. Fix: /etc/nginx/conf.d/orp_engine.conf"
     fi
 
     # Alpine nginx does not use systemctl; use native signals.
     # _proc_running uses ps as a pgrep fallback.
-    if _proc_running nginx; then
+    if pgrep nginx >/dev/null; then
         printf '[*] Reloading Nginx config...\n'
-        $SUDO nginx -s reload
+        doas nginx -s reload
     else
         printf '[*] Starting Nginx...\n'
-        $SUDO nginx
+        doas nginx
     fi
 
     sleep 1
-    if ! _proc_running nginx; then
-        orp_die "Nginx failed to start. Run: ${SUDO} nginx -t"
+    if ! pgrep nginx >/dev/null; then
+        orp_die "Nginx failed to start. Run: doas nginx -t"
     fi
-    
     printf '[✔] Gateway operational on :9443.\n'
 }

@@ -1,19 +1,19 @@
 {
   "lgu": {
-    "name": "BARANGAY BUNAO",
-    "signer_name": "HON. MARCO C. FERNANDEZ",
-    "signer_position": "SK MEMBER",
+    "name": "Barangay Motong, Dumaguete City",
+    "signer_name": "HON. SHANDY NAZARENO",
+    "signer_position": "SK CHAIRPERSON",
     "timezone": "Asia/Manila"
   },
   "portal": {
     "title": "TruthChain Verification",
-    "subtitle": "LGU BARANGAY BUNAO · Cryptographic Document Audit Portal"
+    "subtitle": "LGU Barangay Motong, Dumaguete City · Cryptographic Document Audit Portal"
   },
   "github": {
-    "owner": "openrespublica-ph",
-    "repo": "truthchain",
-    "portal_url": "https://openrespublica-ph.github.io/truthchain/verify.html"
+    "owner": "openrespublica",
+    "repo": "orp-practice",
+    "portal_url": "https://openrespublica.github.io/orp-practice/verify.html"
   },
-  "generated": "2026-05-13T17:42:33Z",
+  "generated": "2026-05-31T05:49:48+08:00",
   "version": "1.0.0"
 }
