@@ -1,0 +1,17 @@
+{
+  "status": "VERIFIED",
+  "signer": "HON. SHANDY NAZARENO",
+  "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
+  "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
+  "document_type": "LOAD_SLIP__NORSU",
+  "control_number": "Verified_2026-0012-LOAD_SLIP__NORSU",
+  "sha256_hash": "496337246ece6e0afc05753a60c076e866701e197763391412d8c861af1dd56a",
+  "timestamp": "2026-06-05 01:35 AM PHT",
+  "immudb_transaction_id": 12,
+  "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=496337246ece6e0afc05753a60c076e866701e197763391412d8c861af1dd56a",
+  "data_signature": {
+    "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"control_number\": \"Verified_2026-0012-LOAD_SLIP__NORSU\", \"document_type\": \"LOAD_SLIP__NORSU\", \"immudb_transaction_id\": 12, \"operator_identity\": \"CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH\", \"position\": \"SK CHAIRPERSON, Barangay Motong, Dumaguete City\", \"sha256_hash\": \"496337246ece6e0afc05753a60c076e866701e197763391412d8c861af1dd56a\", \"signer\": \"HON. SHANDY NAZARENO\", \"status\": \"VERIFIED\", \"timestamp\": \"2026-06-05 01:35 AM PHT\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=496337246ece6e0afc05753a60c076e866701e197763391412d8c861af1dd56a\"}\n-----BEGIN PGP SIGNATURE-----\n\niJMEARYKADsWIQQTkBFjNxEHhr6APDdLRmLs4YGcggUCaiG3Uh0cbWFyY29mZXJu\nYW5kZXowMjA0QGdtYWlsLmNvbQAKCRBLRmLs4YGcgruYAP0cIf07/VoVzFlOHyrw\nDLoj/oHXiT56FXDGc7hOfohHSAD/T9fSnWzwvq8eHKD/C2jvjI24oBYV+q4BCWpY\nDUrvqwo=\n=U5LO\n-----END PGP SIGNATURE-----\n",
+    "hash_anchor": "fb5d9af615b59b1d2aa83b36258cf2aae0ef3df4a38eaf34961e49a814683fcc",
+    "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE"
+  }
+}

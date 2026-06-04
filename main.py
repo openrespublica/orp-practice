@@ -424,7 +424,7 @@ def execute_truthchain_pipeline(pdf_bytes: bytes, doc_type: str, operator_identi
         "position":              f"{SIGNER_POS}, {LGU_NAME}",
         "operator_identity":     operator_identity,
         "document_type":         doc_type,
-        "control_number":        control_no,
+        "control_number":        final_ctrl,
         "sha256_hash":           sha256_hash,
         "timestamp":             timestamp_ph,
         "immudb_transaction_id": tx.id,
@@ -435,7 +435,7 @@ def execute_truthchain_pipeline(pdf_bytes: bytes, doc_type: str, operator_identi
     if pgp_sig:
         record["data_signature"] = pgp_sig
 
-    json_path = os.path.join(RECORDS_DIR, f"{control_no}.json")
+    json_path = os.path.join(RECORDS_DIR, f"{sha256_hash}.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(record, f, indent=2, ensure_ascii=False)
 
