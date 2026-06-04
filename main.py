@@ -47,9 +47,9 @@ SSH_AUTH_SOCK = os.getenv("SSH_AUTH_SOCK")
 
 if not all([GPG_HOME, GPG_EMAIL, SSH_AUTH_SOCK]):
     logger.critical("SECURITY FAILURE: Required environment variables missing")
-    logger.critical(f"  - GPG_HOME: {'✅' if GPG_HOME else '❌ MISSING'}")
-    logger.critical(f"  - GPG_EMAIL: {'✅' if GPG_EMAIL else '❌ MISSING'}")
-    logger.critical(f"  - SSH_SOCK: {'✅' if SSH_AUTH_SOCK else '❌ MISSING'}")
+    logger.critical(f"  - GPG_HOME: {'PRESENT' if GPG_HOME else '❌ MISSING'}")
+    logger.critical(f"  - GPG_EMAIL: {'PRESENT' if GPG_EMAIL else '❌ MISSING'}")
+    logger.critical(f"  - SSH_SOCK: {'PRESENT' if SSH_AUTH_SOCK else '❌ MISSING'}")
     raise RuntimeError("Engine must be launched via run_orp.sh or run_orp-gum.sh")
 
 if not GPG_HOME.startswith("/dev/shm") and not GPG_HOME.startswith("/tmp"):
@@ -58,7 +58,7 @@ if not GPG_HOME.startswith("/dev/shm") and not GPG_HOME.startswith("/tmp"):
 
 gpg = gnupg.GPG(gnupghome=GPG_HOME)
 gpg.decode_errors = 'replace'
-logger.info(f"✅ GPG environment initialized in {GPG_HOME}")
+logger.info(f"GPG environment initialized in {GPG_HOME}")
 
 
 # ── 2. CONFIGURATION ─────────────────────────────────────────────
@@ -91,7 +91,7 @@ ctrl_lock = threading.Lock()
 git_lock  = threading.Lock()
 
 os.makedirs(RECORDS_DIR, exist_ok=True)
-logger.info(f"✅ Records directory ready: {RECORDS_DIR}")
+logger.info(f"Records directory ready: {RECORDS_DIR}")
 
 
 # ── 4. VAULT CONNECTION ───────────────────────────────────────────
@@ -119,7 +119,7 @@ def get_client() -> ImmudbClient:
     try:
         c = ImmudbClient(f"{host}:{port}")
         c.login(IMMUDB_USER, _vault_password, database=IMMUDB_DB)
-        logger.info(f"✅ Vault unlocked → {host}:{port}/{IMMUDB_DB}")
+        logger.info(f" Vault unlocked → {host}:{port}/{IMMUDB_DB}")
         return c
     except Exception as e:
         logger.error(f"Vault access denied: {e}")
@@ -137,7 +137,7 @@ def graceful_shutdown(signum, frame):
     logger.warning("Received shutdown signal — purging session...")
     try:
         client.logout()
-        logger.info("✅ Vault session closed")
+        logger.info("Vault session closed")
     except Exception as e:
         logger.warning(f"Vault logout error: {e}")
     os._exit(0)
@@ -150,7 +150,7 @@ signal.signal(signal.SIGTERM, graceful_shutdown)
 
 def sign_json_data(record: dict) -> dict | None:
     try:
-        data_str = json.dumps(record, sort_keys=True)
+        data_str = json.dumps(record, sort_keys=True, ensure_ascii=False)
         sig      = gpg.sign(data_str, keyid=GPG_EMAIL)
 
         if sig.status != "signature created":
@@ -312,7 +312,7 @@ def update_manifest(record: dict) -> None:
 
         with open(manifest_path, "w") as f:
             json.dump(records, f, indent=2)
-        logger.info(f"✅ Manifest updated: {len(records)} records")
+        logger.info(f"Manifest updated: {len(records)} records")
     except Exception as e:
         logger.error(f"Manifest update failed: {e}")
         raise
@@ -363,7 +363,7 @@ def run_git_command(cmd: list, description: str) -> bool:
         if result.stdout.strip():
             logger.debug(f"stdout: {result.stdout.strip()}")
 
-        logger.info(f"✅ {description}")
+        logger.info(f"{description}")
         return True
 
     except subprocess.TimeoutExpired:
@@ -450,14 +450,14 @@ def sync_to_github(json_path: str, record: dict) -> None:
                     ["git", "commit", "-m", f"Auto-healed conflict for {anchor_hash}"],
                     "Commit resolutions",
                 )
-                logger.info("✅ Self-healing complete")
+                logger.info("Self-healing complete")
 
             if not run_git_command(
                 ["git", "push", "origin", "main"], "Push to remote"
             ):
                 return
 
-            logger.info(f"✅ TruthChain synchronized: {anchor_hash[:16]}...")
+            logger.info(f"TruthChain synchronized: {anchor_hash[:16]}...")
 
         except Exception as e:
             logger.error(f"Sync thread error: {e}", exc_info=True)
@@ -529,7 +529,7 @@ def upload_pdf():
             try:
                 logger.info(f"Anchoring hash (attempt {attempt}/{VAULT_MAX_RETRIES})...")
                 tx = client.set(sha256_hash.encode(), b"VERIFIED_BY_ORP_ENGINE")
-                logger.info(f"✅ Hash anchored with tx_id={tx.id}")
+                logger.info(f" Hash anchored with tx_id={tx.id}")
                 break
             except Exception as e:
                 last_error = e
@@ -565,26 +565,28 @@ def upload_pdf():
         operator_identity = request.headers.get("X-Operator-ID", "UNKNOWN")
 
         record = {
-            "status":                "VERIFIED ✅",
+            "status":                "VERIFIED",
             "signer":                SIGNER_NAME,
             "position":              f"{SIGNER_POS}, {LGU_NAME}",
             "operator_identity":     operator_identity,
             "document_type":         doc_type,
-            "control_number":        final_ctrl,
+            "control_number":        control_no,
             "sha256_hash":           sha256_hash,
             "timestamp":             timestamp_ph,
             "immudb_transaction_id": tx.id,
             "verification_url":      f"{GITHUB_PORTAL}?hash={sha256_hash}",
         }
+#"control_number":        final_ctrl,
 
         pgp_sig = sign_json_data(record)
         if pgp_sig:
             record["data_signature"] = pgp_sig
 
         # ── Step 6: Save JSON record ──────────────────────────────
-        json_path = os.path.join(RECORDS_DIR, f"{sha256_hash}.json")
-        with open(json_path, "w") as f:
-            json.dump(record, f, indent=2)
+        #json_path = os.path.join(RECORDS_DIR, f"{sha256_hash}.json")
+        json_path = os.path.join(RECORDS_DIR, f"{control_no}.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2, ensure_ascii=False)
 
         # ── Step 7: Sync to GitHub (background) ──────────────────
         start_sync(json_path, record)
@@ -596,7 +598,7 @@ def upload_pdf():
         )
 
         # ── Step 9: Return stamped PDF ────────────────────────────
-        logger.info(f"✅ Upload complete: {final_ctrl}")
+        logger.info(f" Upload complete: {final_ctrl}")
         return send_file(
             stamped_pdf_buf,
             as_attachment=True,
