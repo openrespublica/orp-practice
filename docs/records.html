@@ -429,7 +429,7 @@
                 <div class="seal-ornament"></div>
             </div>
             <h1>Public Audit Ledger</h1>
-            <p class="subtitle">Transparency Portal &nbsp;·&nbsp; {{LGU_NAME}}</p>
+            <p class="subtitle">Transparency Portal &nbsp;·&nbsp; <span id="lgu-name-header">{{LGU_NAME}}</span></p>
         </div>
     </header>
 
@@ -500,7 +500,7 @@
         </div>
 
         <nav class="footer-nav">
-            <a href="index.html">Verifier</a>
+            <a href="verify.html">Verifier</a>
             <a href="records.html" class="active">Public Ledger</a>
             <a href="about.html">About</a>
         </nav>
@@ -509,17 +509,10 @@
 
     <footer class="site-footer">
         Secured by <strong>immudb</strong> &amp; Ed25519 cryptography &nbsp;·&nbsp;
-        <strong>OpenResPublica TruthChain</strong> &nbsp;·&nbsp; {{LGU_NAME}}
+        <strong>OpenResPublica TruthChain</strong> &nbsp;·&nbsp; <span id="lgu-name-footer">{{LGU_NAME}}</span>
     </footer>
 
-    <!-- ledger.js handles manifest fetch, stats, pagination, and search.
-         Bugs fixed in ledger.js vs this old inline script:
-           • .reverse() removed — manifest is already newest-first from main.py
-           • ledgerData[0] now correctly returns the NEWEST record (not oldest)
-           • statYear auto-populated from new Date().getFullYear()
-           • null safety on all item fields — no more TypeErrors on bad records
-           • Optional chaining on search input reference -->
-    <script src="ledger.js"></script>
+    <script src="assets/ledger.js"></script>
 
 </body>
 </html>
