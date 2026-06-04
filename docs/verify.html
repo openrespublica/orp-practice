@@ -10,47 +10,124 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --navy: #002147; --navy-deep: #001530; --navy-mid: #003366;
-            --gold: #C9A84C; --gold-pale: #FDF3D0; --white: #FAFAF7; --ink: #1A1A2E; --muted: #6B7280;
-            --border: rgba(0,33,71,0.1); --success: #1E7A3E; --success-pale: #F0FAF4; 
-            --error: #B91C1C; --warning: #854d0e;
+            --gold: #C9A84C; --gold-pale: #FDF3D0;
+            --white: #FAFAF7; --ink: #1A1A2E; --muted: #6B7280;
+            --border: rgba(0,33,71,0.1);
+            --success: #1E7A3E; --success-pale: #F0FAF4;
+            --error: #B91C1C; --amber: #854d0e;
             --font-serif: 'Playfair Display', Georgia, serif;
-            --font-sans: 'Source Sans 3', system-ui, sans-serif;
-            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-            --transition-fast: 0.15s ease;
+            --font-sans:  'Source Sans 3', system-ui, sans-serif;
+            --font-mono:  'IBM Plex Mono', 'Courier New', monospace;
         }
-
         body { background: #F0F2F5; color: var(--ink); font-family: var(--font-sans); min-height: 100vh; display: flex; flex-direction: column; }
 
         .site-header { background: var(--navy-deep); border-bottom: 3px solid var(--gold); }
         .header-inner { max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem 2rem; text-align: center; }
         .republic-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
-        .site-header h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: #fff; }
-        
+        .site-header h1 { font-family: var(--font-serif); font-size: clamp(1.6rem,4vw,2.2rem); font-weight: 700; color: #fff; }
+
         main { flex: 1; max-width: 700px; margin: 0 auto; width: 100%; padding: 3rem 1.5rem; }
 
-        .verify-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,33,71,0.06); overflow: hidden; }
-        
-        .status-banner { padding: 1.5rem; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.05em; color: #fff; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
-        .status-verified { background: var(--success); }
-        .status-pending { background: var(--warning); } /* Used for warnings/anomalies */
-        .status-error { background: var(--error); }
+        /* ── verify card ── */
+        .verify-card {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,33,71,0.06);
+            overflow: hidden;
+        }
 
+        /* status banner */
+        .status-banner {
+            padding: 1.25rem 1.5rem; font-weight: 700; font-size: 1.05rem;
+            letter-spacing: 0.04em; color: #fff; text-align: center;
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+        }
+        .status-verified { background: var(--success); }
+        .status-pending  { background: var(--amber); }
+        .status-error    { background: var(--error); }
+
+        .status-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px;
+            border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 50%; font-size: 0.9rem; flex-shrink: 0;
+        }
+
+        /* spinner */
+        .spinner {
+            width: 22px; height: 22px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.8s linear infinite; flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* card body */
         .card-body { padding: 2rem; }
-        .section-title { font-family: var(--font-serif); font-size: 1.1rem; color: var(--navy-mid); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; margin-top: 1.75rem; }
-        
+
+        .section-title {
+            font-family: var(--font-serif); font-size: 1.05rem; color: var(--navy-mid);
+            border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+            margin-bottom: 1.25rem; margin-top: 1.75rem;
+        }
+        .card-body .section-title:first-child { margin-top: 0; }
+
         .data-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
         @media (min-width: 500px) { .data-grid { grid-template-columns: 1fr 1fr; } }
-        
-        .data-item { display: flex; flex-direction: column; gap: 0.25rem; }
-        .data-label { font-size: 0.72rem; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+        .data-item  { display: flex; flex-direction: column; gap: 0.25rem; }
+        .data-label { font-size: 0.72rem; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
         .data-value { font-size: 0.95rem; font-weight: 500; word-break: break-word; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: #e2e8f0; color: var(--navy-deep); }
+        .badge      { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: #e2e8f0; color: var(--navy-deep); }
 
-        .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
+        /* crypto audit items */
+        .crypto-proofs { display: flex; flex-direction: column; gap: 0.75rem; }
+        .crypto-item {
+            display: flex; align-items: flex-start; gap: 0.9rem;
+            background: #F9FAFB; border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.9rem 1rem;
+        }
+        .crypto-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1.4; }
+        .crypto-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+        .crypto-text strong { font-size: 0.82rem; color: var(--navy-mid); }
+        .crypto-text span   { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); word-break: break-all; }
+
+        /* manual form */
+        .fallback-form .fallback-text { font-size: 0.88rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.5rem; }
+        .form-group  { margin-bottom: 1.25rem; }
+        .form-label  { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--navy-mid); }
+        .form-hint   { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+        .form-input {
+            width: 100%; padding: 0.75rem; border: 1.5px solid var(--border);
+            border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem;
+            background: #fff; transition: border-color 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: var(--navy-mid); }
+        .form-input.input-error { border-color: var(--error); animation: shake 0.35s ease; }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)}
+            20%{transform:translateX(-6px)}
+            40%{transform:translateX(6px)}
+            60%{transform:translateX(-4px)}
+            80%{transform:translateX(4px)}
+        }
+
+        .btn-submit {
+            width: 100%; padding: 0.85rem; background: var(--navy-mid); color: #fff;
+            border: none; border-radius: 8px; font-family: inherit; font-weight: 600;
+            font-size: 0.9rem; cursor: pointer; margin-top: 0.5rem; transition: background 0.2s;
+        }
+        .btn-submit:hover { background: var(--navy); }
+
+        .btn-retry {
+            display: inline-block; margin-top: 1.5rem; padding: 0.65rem 2rem;
+            background: var(--navy-mid); color: #fff; border: none; border-radius: 8px;
+            font-family: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-retry:hover { background: var(--navy); }
+
+        /* footer */
         .footer-nav { margin-top: 2rem; text-align: center; }
-        .footer-nav a { font-size: 0.85rem; color: var(--navy-mid); font-weight: 600; }
+        .footer-nav a { font-size: 0.85rem; color: var(--navy-mid); font-weight: 600; text-decoration: none; }
+        .footer-nav a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -59,6 +136,9 @@
         <div class="header-inner">
             <p class="republic-label">Republic of the Philippines</p>
             <h1>Civic Verification Portal</h1>
+            <p style="font-size:0.85rem;color:rgba(201,168,76,0.85);margin-top:0.4rem;">
+                <span data-config="lgu.name">—</span>
+            </p>
         </div>
     </header>
 
@@ -66,7 +146,7 @@
         <div class="verify-card" id="card-container">
             <div class="status-banner status-pending">
                 <div class="spinner"></div>
-                Initializing Security Ledger...
+                <span>Initializing Security Ledger…</span>
             </div>
         </div>
 
@@ -74,7 +154,8 @@
             <a href="records.html">← Public Audit Ledger</a>
         </nav>
     </main>
-    <script src="/assets/config-loader.js"></script>
-    <script src="/assets/verify.js"></script>
+
+    <script src="assets/config-loader.js"></script>
+    <script src="assets/verify.js"></script>
 </body>
 </html>
