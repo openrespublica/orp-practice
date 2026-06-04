@@ -1,24 +1,31 @@
-// assets/config-loader.js
 async function loadConfig() {
     try {
-        // Fetching from the specified path
-        const response = await fetch('docs/config.json');
+        // Try to fetch from 'config.json'. 
+        // If your file is in a /docs folder, use 'docs/config.json'
+        const response = await fetch('config.json'); 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const config = await response.json();
 
-        // Helper to get nested values (e.g., "lgu.name" -> config.lgu.name)
-        const getNestedValue = (obj, path) => {
-            return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+        // Helper: gets the value from the config object
+        const getValue = (path) => {
+            return path.split('.').reduce((acc, part) => acc && acc[part], config);
         };
 
-        // Replace all {{key.path}} patterns in the document body
-        document.body.innerHTML = document.body.innerHTML.replace(/{{([\w.]+)}}/g, (match, path) => {
-            const value = getNestedValue(config, path);
-            return value !== undefined ? value : match;
-        });
+        // TreeWalker: Finds all text nodes containing {{...}} and replaces them safely
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while(node = walker.nextNode()) {
+            if (node.nodeValue.includes('{{')) {
+                node.nodeValue = node.nodeValue.replace(/{{([\w.]+)}}/g, (match, path) => {
+                    const val = getValue(path);
+                    return val !== undefined ? val : match;
+                });
+            }
+        }
+        console.log("TruthChain: Config loaded successfully.");
     } catch (error) {
-        console.error("Failed to load configuration:", error);
+        console.error("TruthChain: Configuration failed to load.", error);
     }
 }
 
