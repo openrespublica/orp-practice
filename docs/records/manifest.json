@@ -5,6 +5,23 @@
     "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
     "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
     "document_type": "BARANGAY-CERT",
+    "control_number": "Verified_2026-0006-BARANGAY-CERT",
+    "sha256_hash": "9c91053dfde699fe01d56f8acea8cfb3b40996f1cb2ac7652f6878153743d54d",
+    "timestamp": "2026-06-04 03:18 PM PHT",
+    "immudb_transaction_id": 6,
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=9c91053dfde699fe01d56f8acea8cfb3b40996f1cb2ac7652f6878153743d54d",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"control_number\": \"Verified_2026-0006-BARANGAY-CERT\", \"document_type\": \"BARANGAY-CERT\", \"immudb_transaction_id\": 6, \"operator_identity\": \"CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH\", \"position\": \"SK CHAIRPERSON, Barangay Motong, Dumaguete City\", \"sha256_hash\": \"9c91053dfde699fe01d56f8acea8cfb3b40996f1cb2ac7652f6878153743d54d\", \"signer\": \"HON. SHANDY NAZARENO\", \"status\": \"VERIFIED \\u2705\", \"timestamp\": \"2026-06-04 03:18 PM PHT\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=9c91053dfde699fe01d56f8acea8cfb3b40996f1cb2ac7652f6878153743d54d\"}\n-----BEGIN PGP SIGNATURE-----\n\niJMEARYKADsWIQTFnYlHWoVfVX8uORjcD5azyDzIGAUCaiEmqx0cbWFyY29mZXJu\nYW5kZXowMjA0QGdtYWlsLmNvbQAKCRDcD5azyDzIGHRSAPwKujVRgYus9K2LzVVp\nvQhrOPqMWsgxPxB9hJksmpmtbgD+LYOH+NbzGe0c8alRU3gnDyHRQyMlMKZWE2AO\nxfHFAAA=\n=XR8L\n-----END PGP SIGNATURE-----\n",
+      "hash_anchor": "28cc39109128af35b5e83bc07ccbdaa4663e1adae1c26ca9db06e89e98b497e9",
+      "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE"
+    }
+  },
+  {
+    "status": "VERIFIED \u2705",
+    "signer": "HON. SHANDY NAZARENO",
+    "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
+    "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
+    "document_type": "BARANGAY-CERT",
     "control_number": "Verified_2026-0005-BARANGAY-CERT",
     "sha256_hash": "9c91053dfde699fe01d56f8acea8cfb3b40996f1cb2ac7652f6878153743d54d",
     "timestamp": "2026-06-04 03:06 PM PHT",

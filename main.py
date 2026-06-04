@@ -243,9 +243,9 @@ def add_footer(
             c      = canvas.Canvas(packet, pagesize=A4)
 
             # ── FIX: THE OVERLAP PROBLEM (OPAQUE BACKGROUND PLATE) ──
-            # Creates a pristine white shield over background text, stamps, or barcodes
             c.setFillColorRGB(1, 1, 1)
-            c.rect(24 * mm, 4 * mm, 162 * mm, 19 * mm, fill=1, stroke=0)
+            # Expanded the plate downward to 3mm to cover the new text position
+            c.rect(24 * mm, 3 * mm, 162 * mm, 20 * mm, fill=1, stroke=0)
 
             # Reset fill to black for text assets
             c.setFillColorRGB(0, 0, 0)
@@ -253,12 +253,11 @@ def add_footer(
             c.line(25 * mm, 22 * mm, 185 * mm, 22 * mm)
 
             # ── FIX: CALL TO ACTION (CTA) ──
-            # Explicit verification instructions drawn centered directly over the QR block
+            # Moved below the QR code (Y axis set to 4mm)
             c.setFont("Helvetica-Bold", 6)
-            c.drawCentredString(172.5 * mm, 20.5 * mm, "SCAN TO VERIFY")
+            c.drawCentredString(172.5 * mm, 4 * mm, "SCAN TO VERIFY")
 
             # ── FIX: CRYPTOGRAPHIC TRUNCATION ELIMINATED ──
-            # Full 64-character hex hash anchor passed un-truncated to the tracking table
             items = [
                 ("TIMESTAMP", timestamp),
                 ("CTRL NO",   control_number),
@@ -279,7 +278,8 @@ def add_footer(
                 c.drawString(55 * mm, y, str(val))
                 y -= 3.5 * mm
 
-            c.drawImage(qr_image, 165 * mm, 5 * mm, width=15 * mm, height=15 * mm)
+            # Nudged the QR code up to 6mm to make room for the text below it
+            c.drawImage(qr_image, 165 * mm, 6 * mm, width=15 * mm, height=15 * mm)
             c.save()
             packet.seek(0)
 
@@ -293,7 +293,6 @@ def add_footer(
     except Exception as e:
         logger.error(f"PDF stamping failed: {e}")
         raise
-
 
 def update_manifest(record: dict) -> None:
     try:
