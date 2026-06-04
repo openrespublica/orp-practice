@@ -3,71 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Document | OpenResPublica</title>
+    <title>Verify Document | OpenResPublica TruthChain</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --navy: #002147; --navy-deep: #001530; --navy-mid: #003366;
-            --gold: #C9A84C; --white: #FAFAF7; --ink: #1A1A2E; --muted: #6B7280;
-            --border: rgba(0,33,71,0.1); --success: #059669; --error: #DC2626;
+            --gold: #C9A84C; --gold-pale: #FDF3D0; --white: #FAFAF7; --ink: #1A1A2E; --muted: #6B7280;
+            --border: rgba(0,33,71,0.1); --success: #1E7A3E; --success-pale: #F0FAF4; --error: #B91C1C;
             --font-serif: 'Playfair Display', Georgia, serif;
             --font-sans: 'Source Sans 3', system-ui, sans-serif;
             --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --transition-fast: 0.15s ease;
         }
 
         body {
-            background: var(--white); color: var(--ink);
+            background: #F0F2F5; color: var(--ink);
             font-family: var(--font-sans); min-height: 100vh;
             display: flex; flex-direction: column;
         }
 
-        /* Header (Imported from your records.html style) */
         .site-header { background: var(--navy-deep); border-bottom: 3px solid var(--gold); position: relative; overflow: hidden; }
         .header-inner { max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem 2rem; text-align: center; }
         .republic-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
-        .site-header h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 0.4rem; }
+        .site-header h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: #fff; line-height: 1.2; }
         
         main { flex: 1; max-width: 700px; margin: 0 auto; width: 100%; padding: 3rem 1.5rem; }
 
-        /* Verification Card */
+        /* Verification Card Balance */
         .verify-card {
             background: #fff; border: 1px solid var(--border);
-            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,33,71,0.08);
-            overflow: hidden; text-align: center; position: relative;
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,33,71,0.06);
+            overflow: hidden; position: relative;
         }
         
-        .status-banner { padding: 1.5rem; font-weight: 700; font-size: 1.2rem; letter-spacing: 0.05em; color: #fff; }
+        .status-banner { padding: 1.5rem; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.05em; color: #fff; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
         .status-verified { background: var(--success); }
         .status-pending { background: var(--navy-mid); }
         .status-error { background: var(--error); }
 
-        .card-body { padding: 2rem; text-align: left; }
+        .card-body { padding: 2rem; }
         
-        .section-title { font-family: var(--font-serif); font-size: 1.1rem; color: var(--navy-mid); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; margin-top: 1.5rem;}
+        .section-title { font-family: var(--font-serif); font-size: 1.1rem; color: var(--navy-mid); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; margin-top: 1.75rem;}
         .section-title:first-child { margin-top: 0; }
 
-        .data-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .data-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
         @media (min-width: 500px) { .data-grid { grid-template-columns: 1fr 1fr; } }
         
         .data-item { display: flex; flex-direction: column; gap: 0.25rem; }
-        .data-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+        .data-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
         .data-value { font-size: 0.95rem; color: var(--ink); font-weight: 500; word-break: break-word; }
-        .data-mono { font-family: var(--font-mono); font-size: 0.8rem; background: rgba(0,0,0,0.03); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); }
+        .data-mono { font-family: var(--font-mono); font-size: 0.78rem; background: #F1F5F9; padding: 3px 6px; border-radius: 4px; color: var(--navy-mid); border: 1px solid rgba(0,33,71,0.05); }
 
-        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(0,33,71,0.07); color: var(--navy-mid); }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: var(--gold-pale); color: #8a6a14; }
 
-        .crypto-proofs { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; border: 1px dashed var(--border); }
-        .crypto-item { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem; }
+        .crypto-proofs { background: #FAFAF7; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; border: 1px solid var(--border); border-left: 4px solid var(--gold); }
+        .crypto-item { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 1.25rem; }
         .crypto-item:last-child { margin-bottom: 0; }
-        .crypto-icon { font-size: 1.2rem; }
+        .crypto-icon { font-size: 1.2rem; line-height: 1; }
         .crypto-text { flex: 1; }
-        .crypto-text strong { display: block; font-size: 0.85rem; color: var(--navy-deep); }
+        .crypto-text strong { display: block; font-size: 0.85rem; color: var(--navy-deep); margin-bottom: 0.15rem; }
         .crypto-text span { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); word-break: break-all; }
 
-        /* Loader */
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        /* Manual Fallback Input Form */
+        .fallback-form { text-align: left; }
+        .fallback-text { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--navy-mid); }
+        .form-input { width: 100%; padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; box-sizing: border-box; background: #fff; }
+        .form-input:focus { outline: none; border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(0, 33, 102, 0.1); }
+        .btn-submit { width: 100%; padding: 0.85rem; background: var(--navy-mid); color: #fff; border: none; border-radius: 8px; font-family: var(--font-sans); font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background var(--transition-fast); }
+        .btn-submit:hover { background: var(--navy); }
+
+        /* Animated Loading Asset */
+        .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
         .footer-nav { margin-top: 2rem; display: flex; justify-content: center; gap: 1rem; }
@@ -80,7 +90,7 @@
     <header class="site-header">
         <div class="header-inner">
             <p class="republic-label">Republic of the Philippines</p>
-            <h1>Verification Portal</h1>
+            <h1>Civic Verification Portal</h1>
         </div>
     </header>
 
@@ -88,128 +98,15 @@
         <div class="verify-card" id="card-container">
             <div class="status-banner status-pending">
                 <div class="spinner"></div>
-                Searching Immutable Ledger...
+                Initializing Security Ledger...
             </div>
         </div>
 
         <nav class="footer-nav">
-            <a href="records.html">← View Public Ledger</a>
+            <a href="records.html">← Public Audit Ledger</a>
         </nav>
     </main>
 
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const fileHash = params.get('hash');
-        const container = document.getElementById('card-container');
-
-        if (!fileHash) {
-            showError("No Document Hash Provided", "Please scan a valid ORP QR code.");
-        } else {
-            // Append timestamp to prevent aggressive browser caching of the JSON
-            fetch(`records/${fileHash}.json?t=${Date.now()}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Record not found");
-                    return response.json();
-                })
-                .then(data => renderSuccess(data))
-                .catch(err => {
-                    showError(
-                        "Verification Pending or Not Found", 
-                        "If this document was just issued, please wait 60 seconds for the Git ledger to synchronize and refresh the page."
-                    );
-                });
-        }
-
-        function renderSuccess(data) {
-            // Check if PhilID data exists
-            const philIdSection = data.philid_pcn ? `
-                <h3 class="section-title">Verified Subject</h3>
-                <div class="data-grid">
-                    <div class="data-item">
-                        <span class="data-label">PhilSys PCN</span>
-                        <span class="data-value">${data.philid_pcn.replace(/.(?=.{4})/g, '*')}</span>
-                    </div>
-                    <div class="data-item">
-                        <span class="data-label">Subject Hash</span>
-                        <span class="data-value data-mono" style="font-size: 0.65rem;">${data.philid_hash}</span>
-                    </div>
-                </div>
-            ` : '';
-
-            // Extract the GPG signature status from the audit record.
-            // hardware_seal (ESP32) is a Phase 2 feature — not written by main.py yet.
-            // Showing "N/A..." for a field that never exists is misleading; removed.
-            const gpgSig = data.data_signature?.gpg_signature ? "Valid OpenPGP Signature" : "N/A";
-
-            container.innerHTML = `
-                <div class="status-banner status-verified">
-                    ✅ AUTHENTIC DOCUMENT
-                </div>
-                <div class="card-body">
-                    <h3 class="section-title">Document Details</h3>
-                    <div class="data-grid">
-                        <div class="data-item">
-                            <span class="data-label">Control Number</span>
-                            <span class="data-value" style="font-weight: 700; color: var(--navy-mid);">${data.control_number || '—'}</span>
-                        </div>
-                        <div class="data-item">
-                            <span class="data-label">Document Type</span>
-                            <span class="data-value"><span class="badge">${data.document_type || 'GENERAL'}</span></span>
-                        </div>
-                        <div class="data-item">
-                            <span class="data-label">Date Issued</span>
-                            <span class="data-value">${data.timestamp || '—'}</span>
-                        </div>
-                        <div class="data-item">
-                            <span class="data-label">Authorized Signatory</span>
-                            <span class="data-value">${data.signer || '—'}<br><small style="color: var(--muted);">${data.position || ''}</small></span>
-                        </div>
-                    </div>
-
-                    ${philIdSection}
-
-                    <div class="crypto-proofs">
-                        <h3 class="section-title" style="margin-top: 0;">TruthChain Proofs</h3>
-                        
-                        <div class="crypto-item">
-                            <div class="crypto-icon">🔗</div>
-                            <div class="crypto-text">
-                                <strong>Document Hash (SHA-256)</strong>
-                                <span>${data.sha256_hash || '—'}</span>
-                            </div>
-                        </div>
-
-                        <div class="crypto-item">
-                            <div class="crypto-icon">🗄️</div>
-                            <div class="crypto-text">
-                                <strong>immudb Transaction ID</strong>
-                                <span>TxID: ${data.immudb_transaction_id || 'Anchored'}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="crypto-item">
-                            <div class="crypto-icon">✍️</div>
-                            <div class="crypto-text">
-                                <strong>Operator Identity</strong>
-                                <span>${gpgSig}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function showError(title, message) {
-            container.innerHTML = `
-                <div class="status-banner status-error">
-                    ⚠️ ${title}
-                </div>
-                <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
-                    <p style="color: var(--muted); margin-bottom: 1rem;">${message}</p>
-                    <button onclick="window.location.reload()" style="padding: 10px 20px; background: var(--navy-mid); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-sans);">Refresh Page</button>
-                </div>
-            `;
-        }
-    </script>
+    <script src="assets/verify.js"></script>
 </body>
 </html>
