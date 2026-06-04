@@ -1,7 +1,10 @@
 // /assets/config-loader.js
 async function loadConfig() {
     try {
-        const response = await fetch('/assets/config.json');
+        // Fetch relative to the current URL
+        const response = await fetch('config.json');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const config = await response.json();
 
         // Helper to get nested values (e.g., "lgu.name" -> config.lgu.name)
@@ -9,11 +12,13 @@ async function loadConfig() {
             return path.split('.').reduce((acc, part) => acc && acc[part], obj);
         };
 
-        // Replace all {{key.path}} patterns in the entire document body
+        // Replace all {{key.path}} patterns in the document body
         document.body.innerHTML = document.body.innerHTML.replace(/{{([\w.]+)}}/g, (match, path) => {
             const value = getNestedValue(config, path);
             return value !== undefined ? value : match;
         });
+        
+        console.log("Config loaded successfully:", config);
     } catch (error) {
         console.error("Failed to load configuration:", error);
     }
