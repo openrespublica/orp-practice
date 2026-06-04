@@ -4,6 +4,23 @@
     "signer": "HON. SHANDY NAZARENO",
     "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
     "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
+    "document_type": "BARANGAY_E_SYSTE",
+    "control_number": "2026-0011",
+    "sha256_hash": "b380bd5ebca27d79014f1d77abfac3eb8122d8a5d02b12321c037ae357ff1d2a",
+    "timestamp": "2026-06-04 10:24 PM PHT",
+    "immudb_transaction_id": 11,
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=b380bd5ebca27d79014f1d77abfac3eb8122d8a5d02b12321c037ae357ff1d2a",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"control_number\": \"2026-0011\", \"document_type\": \"BARANGAY_E_SYSTE\", \"immudb_transaction_id\": 11, \"operator_identity\": \"CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH\", \"position\": \"SK CHAIRPERSON, Barangay Motong, Dumaguete City\", \"sha256_hash\": \"b380bd5ebca27d79014f1d77abfac3eb8122d8a5d02b12321c037ae357ff1d2a\", \"signer\": \"HON. SHANDY NAZARENO\", \"status\": \"VERIFIED\", \"timestamp\": \"2026-06-04 10:24 PM PHT\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=b380bd5ebca27d79014f1d77abfac3eb8122d8a5d02b12321c037ae357ff1d2a\"}\n-----BEGIN PGP SIGNATURE-----\n\niJMEARYKADsWIQSzIR+814hyHxTA9lXWbtY44/b1dwUCaiGKnR0cbWFyY29mZXJu\nYW5kZXowMjA0QGdtYWlsLmNvbQAKCRDWbtY44/b1d9SiAPwIdjVx4t+svqYr3luM\n/6sQBa3u2aZ+ZeJ9GluQKMm3ZwEA3zPw7/3knNNyQmqwGp+ayAl9TKxXfythvgFD\nMx3+nA4=\n=Y8K/\n-----END PGP SIGNATURE-----\n",
+      "hash_anchor": "2cb17d7d8a2e0c4ccfc2c7ce9c4628714118f331a309f750c4bf052706aa555c",
+      "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE"
+    }
+  },
+  {
+    "status": "VERIFIED",
+    "signer": "HON. SHANDY NAZARENO",
+    "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
+    "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
     "document_type": "PSA_NSO___GOOGLE",
     "control_number": "2026-0010",
     "sha256_hash": "881361296d354502bbaaee971d7255b6bacf54a825c77e7f68e969b5cd9aff48",
