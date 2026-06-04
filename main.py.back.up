@@ -1,4 +1,4 @@
-# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v6)
+# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v5)
 # Part of the OpenResPublica TruthChain stack.
 # Must be launched via run_orp.sh — never directly.
 
@@ -66,10 +66,10 @@ IMMUDB_HOST = os.getenv("IMMUDB_HOST", "127.0.0.1:3322")
 IMMUDB_USER = os.getenv("IMMUDB_USER", "immudb")
 IMMUDB_DB   = os.getenv("IMMUDB_DB",   "defaultdb")
 
-LGU_NAME    = os.getenv("LGU_NAME",              "Local Government Unit")
+LGU_NAME    = os.getenv("LGU_NAME",             "Local Government Unit")
 SIGNER_NAME = os.getenv("LGU_SIGNER_NAME",       "Authorized Signatory")
 SIGNER_POS  = os.getenv("LGU_SIGNER_POSITION",   "Official")
-TZ_NAME     = os.getenv("LGU_TIMEZONE",          "Asia/Manila")
+TZ_NAME     = os.getenv("LGU_TIMEZONE",           "Asia/Manila")
 
 REPO_PATH     = os.getenv("GITHUB_REPO_PATH",  "/home/orp/openrespublica.github.io")
 GITHUB_PORTAL = os.getenv("GITHUB_PORTAL_URL", "https://openrespublica.github.io/verify.html")
@@ -159,7 +159,7 @@ def sign_json_data(record: dict) -> dict | None:
 
         return {
             "gpg_signature":   str(sig),
-            "hash_anchor":      hashlib.sha256(data_str.encode()).hexdigest(),
+            "hash_anchor":     hashlib.sha256(data_str.encode()).hexdigest(),
             "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE",
         }
     except Exception as e:
@@ -242,16 +242,22 @@ def add_footer(
             packet = io.BytesIO()
             c      = canvas.Canvas(packet, pagesize=A4)
 
+            # ── FIX: THE OVERLAP PROBLEM (OPAQUE BACKGROUND PLATE) ──
             c.setFillColorRGB(1, 1, 1)
+            # Expanded the plate downward to 3mm to cover the new text position
             c.rect(24 * mm, 3 * mm, 162 * mm, 20 * mm, fill=1, stroke=0)
 
+            # Reset fill to black for text assets
             c.setFillColorRGB(0, 0, 0)
             c.setLineWidth(0.5)
             c.line(25 * mm, 22 * mm, 185 * mm, 22 * mm)
 
+            # ── FIX: CALL TO ACTION (CTA) ──
+            # Moved below the QR code (Y axis set to 4mm)
             c.setFont("Helvetica-Bold", 6)
             c.drawCentredString(172.5 * mm, 4 * mm, "SCAN TO VERIFY")
 
+            # ── FIX: CRYPTOGRAPHIC TRUNCATION ELIMINATED ──
             items = [
                 ("TIMESTAMP", timestamp),
                 ("CTRL NO",   control_number),
@@ -263,6 +269,7 @@ def add_footer(
                 c.setFont("Helvetica-Bold", 7)
                 c.drawString(30 * mm, y, f"{label}:")
                 
+                # Dynamically drop text scaling for the hash property so it completely fits
                 if label == "HASH":
                     c.setFont("Helvetica", 5.5)
                 else:
@@ -271,6 +278,7 @@ def add_footer(
                 c.drawString(55 * mm, y, str(val))
                 y -= 3.5 * mm
 
+            # Nudged the QR code up to 6mm to make room for the text below it
             c.drawImage(qr_image, 165 * mm, 6 * mm, width=15 * mm, height=15 * mm)
             c.save()
             packet.seek(0)
@@ -323,6 +331,9 @@ def run_git_command(cmd: list, description: str) -> bool:
         git_env["SSH_AUTH_SOCK"] = live_ssh_sock
         git_env["GNUPGHOME"]     = live_gpg_home
 
+        logger.debug(f"SSH_AUTH_SOCK → {live_ssh_sock}")
+        logger.debug(f"GNUPGHOME     → {live_gpg_home}")
+
         git_env["GIT_SSH_COMMAND"] = (
             "ssh -o BatchMode=yes "
             "-o StrictHostKeyChecking=no "
@@ -337,6 +348,8 @@ def run_git_command(cmd: list, description: str) -> bool:
             "-c", "user.name=Shandy Nazareno",
         ] + cmd[1:]
 
+        logger.debug(f"Git command: {' '.join(defensive_cmd)}")
+
         result = subprocess.run(
             defensive_cmd,
             check=True,
@@ -346,10 +359,47 @@ def run_git_command(cmd: list, description: str) -> bool:
             cwd=REPO_PATH,
             timeout=30,
         )
+
+        if result.stdout.strip():
+            logger.debug(f"stdout: {result.stdout.strip()}")
+
+        logger.info(f"{description}")
         return True
-    except Exception as e:
-        logger.error(f"❌ {description} — failed: {e}")
+
+    except subprocess.TimeoutExpired:
+        logger.error(
+            f"❌ {description} — TIMED OUT after 30s. "
+            f"SSH_AUTH_SOCK={git_env.get('SSH_AUTH_SOCK', 'MISSING')} "
+            f"— verify the gpg-agent socket is reachable from this process."
+        )
         return False
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ {description} — exit {e.returncode}")
+        if e.stderr:
+            logger.error(f"   stderr: {e.stderr[:500]}")
+        if e.stdout:
+            logger.debug(f"   stdout: {e.stdout[:200]}")
+        return False
+
+    except Exception as e:
+        logger.error(f"❌ {description} — unexpected error: {e}")
+        return False
+
+
+def _verify_ssh_agent(git_env: dict) -> None:
+    try:
+        result = subprocess.run(
+            ["ssh-add", "-l"],
+            env=git_env,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        keys = result.stdout.strip() or result.stderr.strip() or "(none)"
+        logger.info(f"SSH agent keys visible to subprocess:\n  {keys}")
+    except Exception as e:
+        logger.warning(f"Could not query SSH agent: {e}")
 
 
 def sync_to_github(json_path: str, record: dict) -> None:
@@ -358,96 +408,70 @@ def sync_to_github(json_path: str, record: dict) -> None:
             update_manifest(record)
             anchor_hash = os.path.basename(json_path).replace(".json", "")
 
-            if not run_git_command(["git", "add", "."], "Stage files"): return
-            run_git_command(["git", "commit", "-m", f"Audit: Anchor {anchor_hash}"], "Commit changes")
-            if not run_git_command(["git", "fetch", "origin"], "Fetch from remote"): return
+            logger.info(f"Starting git sync for {anchor_hash[:16]}...")
 
-            if not run_git_command(["git", "pull", "--rebase", "origin", "main"], "Rebase onto remote main"):
+            probe_env = os.environ.copy()
+            probe_env["SSH_AUTH_SOCK"] = (
+                os.environ.get("SSH_AUTH_SOCK") or SSH_AUTH_SOCK
+            )
+            _verify_ssh_agent(probe_env)
+
+            if not run_git_command(["git", "add", "."], "Stage files"):
+                return
+
+            committed = run_git_command(
+                ["git", "commit", "-m", f"Audit: Anchor {anchor_hash}"],
+                "Commit changes",
+            )
+            if not committed:
+                logger.warning("Commit failed or nothing to commit — continuing to push")
+
+            if not run_git_command(["git", "fetch", "origin"], "Fetch from remote"):
+                return
+
+            rebase_ok = run_git_command(
+                ["git", "pull", "--rebase", "origin", "main"],
+                "Rebase onto remote main",
+            )
+
+            if not rebase_ok:
                 logger.warning("⚠️ Rebase conflict — initiating self-healing...")
-                run_git_command(["git", "rebase", "--abort"], "Abort rebase")
-                run_git_command(["git", "merge", "origin/main", "-X", "ours", "--no-edit"], "Self-heal merge")
-                run_git_command(["git", "add", "."], "Stage fixes")
-                run_git_command(["git", "commit", "-m", "Auto-healed conflict"], "Commit fixes")
 
-            run_git_command(["git", "push", "origin", "main"], "Push to remote")
+                run_git_command(
+                    ["git", "rebase", "--abort"],
+                    "Abort stuck rebase",
+                )
+                run_git_command(
+                    ["git", "merge", "origin/main", "-X", "ours", "--no-edit"],
+                    "Self-healing merge (ours)",
+                )
+                run_git_command(["git", "add", "."], "Stage conflict resolutions")
+                run_git_command(
+                    ["git", "commit", "-m", f"Auto-healed conflict for {anchor_hash}"],
+                    "Commit resolutions",
+                )
+                logger.info("Self-healing complete")
+
+            if not run_git_command(
+                ["git", "push", "origin", "main"], "Push to remote"
+            ):
+                return
+
+            logger.info(f"TruthChain synchronized: {anchor_hash[:16]}...")
+
         except Exception as e:
-            logger.error(f"Sync thread error: {e}")
+            logger.error(f"Sync thread error: {e}", exc_info=True)
 
 
 def start_sync(json_path: str, record: dict) -> None:
-    threading.Thread(target=sync_to_github, args=(json_path, record), daemon=True).start()
+    threading.Thread(
+        target=sync_to_github,
+        args=(json_path, record),
+        daemon=True,
+    ).start()
 
 
-# ── 7. CENTRAL PIPELINE LOGIC ─────────────────────────────────────
-
-def execute_truthchain_pipeline(pdf_bytes: bytes, doc_type: str, operator_identity: str) -> tuple[io.BytesIO, str, dict] | tuple[None, str, int]:
-    """
-    Executes core cryptographic pinning, immudb anchoring, 
-    GPG transaction signing, and PDF stamping contextually.
-    """
-    global client
-
-    if len(pdf_bytes) > MAX_PDF_SIZE:
-        return None, "File exceeds maximum size limits.", 413
-        
-    if not pdf_bytes.startswith(b"%PDF-"):
-        return None, "Invalid binary stream: Document is not a valid PDF payload.", 400
-
-    sha256_hash = hashlib.sha256(pdf_bytes).hexdigest()
-    tx = None
-    last_error = None
-
-    for attempt in range(1, VAULT_MAX_RETRIES + 1):
-        try:
-            tx = client.set(sha256_hash.encode(), b"VERIFIED_BY_ORP_ENGINE")
-            break
-        except Exception as e:
-            last_error = e
-            if attempt < VAULT_MAX_RETRIES:
-                time.sleep(VAULT_RETRY_DELAY)
-                try:
-                    client = get_client()
-                except Exception as rc_err:
-                    last_error = rc_err
-
-    if tx is None:
-        return None, f"Failed to anchor hash inside ledger structure: {last_error}", 503
-
-    local_tz     = pytz.timezone(TZ_NAME)
-    timestamp_ph = datetime.datetime.now(local_tz).strftime("%Y-%m-%d %I:%M %p PHT")
-    control_no   = next_control_number()
-    final_ctrl   = f"Verified_{control_no}-{doc_type}"
-
-    record = {
-        "status":                "VERIFIED",
-        "signer":                SIGNER_NAME,
-        "position":              f"{SIGNER_POS}, {LGU_NAME}",
-        "operator_identity":     operator_identity,
-        "document_type":         doc_type,
-        "control_number":        control_no,
-        "sha256_hash":           sha256_hash,
-        "timestamp":             timestamp_ph,
-        "immudb_transaction_id": tx.id,
-        "verification_url":      f"{GITHUB_PORTAL}?hash={sha256_hash}",
-    }
-
-    pgp_sig = sign_json_data(record)
-    if pgp_sig:
-        record["data_signature"] = pgp_sig
-
-    json_path = os.path.join(RECORDS_DIR, f"{control_no}.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(record, f, indent=2, ensure_ascii=False)
-
-    start_sync(json_path, record)
-
-    qr_buf, _ = generate_qr(sha256_hash)
-    stamped_pdf_buf = add_footer(pdf_bytes, sha256_hash, qr_buf, timestamp_ph, final_ctrl)
-
-    return stamped_pdf_buf, final_ctrl, record
-
-
-# ── 8. ROUTES ────────────────────────────────────────────────────
+# ── 7. ROUTES ────────────────────────────────────────────────────
 
 @app.route("/")
 def home():
@@ -456,7 +480,11 @@ def home():
 
 @app.route("/cert_error.html")
 def cert_error():
-    return "<h1>Sovereign Identity Required</h1><p>A valid operator certificate is required.</p>", 403
+    return (
+        "<h1>Sovereign Identity Required</h1>"
+        "<p>A valid operator certificate is required.</p>",
+        403,
+    )
 
 
 @app.route("/lock_engine", methods=["POST"])
@@ -465,70 +493,128 @@ def lock_engine():
     threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
     return "Engine locked. RAM disk purged.", 200
 
-
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
+    global client
+
     try:
+        # ── Step 1: Validate ─────────────────────────────────────
         file = request.files.get("document")
         if not file or not file.filename.lower().endswith(".pdf"):
+            logger.warning(f"Invalid file: {file.filename if file else 'None'}")
             return "Only PDF files are accepted.", 400
 
+        # ── FIX: DROPDOWN MISMATCH VALIDATION ──
+        # Detects unselected dropdowns or generic client-side fallback tokens
         doc_type = request.form.get("doc_type", "").strip()
         if not doc_type or doc_type.upper() in ["", "CHOOSE", "SELECT", "DEFAULT"]:
-            return "Validation Error: You must select an explicit Document Type.", 400
+            logger.warning("Upload blocked: Operator skipped selecting a definitive document type.")
+            return "Validation Error: You must select an explicit Document Type before uploading.", 400
 
         pdf_bytes = file.read()
+
+        if len(pdf_bytes) > MAX_PDF_SIZE:
+            logger.warning(f"File too large: {len(pdf_bytes)} bytes")
+            return "File exceeds maximum size (20MB).", 413
+
+        # ── Step 2: Fingerprint ──────────────────────────────────
+        sha256_hash = hashlib.sha256(pdf_bytes).hexdigest()
+        logger.info(f"Processing document: {sha256_hash[:16]}...")
+
+        # ── Step 3: Anchor to immudb with retry ──────────────────
+        tx         = None
+        last_error = None
+
+        for attempt in range(1, VAULT_MAX_RETRIES + 1):
+            try:
+                logger.info(f"Anchoring hash (attempt {attempt}/{VAULT_MAX_RETRIES})...")
+                tx = client.set(sha256_hash.encode(), b"VERIFIED_BY_ORP_ENGINE")
+                logger.info(f" Hash anchored with tx_id={tx.id}")
+                break
+            except Exception as e:
+                last_error = e
+                if attempt < VAULT_MAX_RETRIES:
+                    logger.warning(f"Vault error (attempt {attempt}): {e}")
+                    logger.info(f"Retrying in {VAULT_RETRY_DELAY}s...")
+                    time.sleep(VAULT_RETRY_DELAY)
+                    try:
+                        logger.info("Reconnecting to vault...")
+                        client = get_client()
+                    except Exception as reconnect_err:
+                        logger.warning(f"Reconnection failed: {reconnect_err}")
+                        last_error = reconnect_err
+                else:
+                    logger.error(f"Vault unavailable after {VAULT_MAX_RETRIES} attempts")
+
+        if tx is None:
+            logger.error(f"Failed to anchor: {last_error}")
+            return jsonify({
+                "status":  "ERROR",
+                "message": f"Failed to anchor hash after {VAULT_MAX_RETRIES} attempts",
+                "error":   str(last_error),
+                "sha256":  sha256_hash,
+            }), 503
+
+        # ── Step 4: Control number & timestamp ───────────────────
+        local_tz     = pytz.timezone(TZ_NAME)
+        timestamp_ph = datetime.datetime.now(local_tz).strftime("%Y-%m-%d %I:%M %p PHT")
+        control_no   = next_control_number()
+        final_ctrl   = f"Verified_{control_no}-{doc_type}"
+
+        # ── Step 5: Assemble & sign the audit record ─────────────
         operator_identity = request.headers.get("X-Operator-ID", "UNKNOWN")
 
-        stamped_buf, final_ctrl, err_or_rec = execute_truthchain_pipeline(
-            pdf_bytes, doc_type, operator_identity
+        record = {
+            "status":                "VERIFIED",
+            "signer":                SIGNER_NAME,
+            "position":              f"{SIGNER_POS}, {LGU_NAME}",
+            "operator_identity":     operator_identity,
+            "document_type":         doc_type,
+            "control_number":        control_no,
+            "sha256_hash":           sha256_hash,
+            "timestamp":             timestamp_ph,
+            "immudb_transaction_id": tx.id,
+            "verification_url":      f"{GITHUB_PORTAL}?hash={sha256_hash}",
+        }
+#"control_number":        final_ctrl,
+
+        pgp_sig = sign_json_data(record)
+        if pgp_sig:
+            record["data_signature"] = pgp_sig
+
+        # ── Step 6: Save JSON record ──────────────────────────────
+        #json_path = os.path.join(RECORDS_DIR, f"{sha256_hash}.json")
+        json_path = os.path.join(RECORDS_DIR, f"{control_no}.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2, ensure_ascii=False)
+
+        # ── Step 7: Sync to GitHub (background) ──────────────────
+        start_sync(json_path, record)
+
+        # ── Step 8: Stamp the PDF ─────────────────────────────────
+        qr_buf, _       = generate_qr(sha256_hash)
+        stamped_pdf_buf = add_footer(
+            pdf_bytes, sha256_hash, qr_buf, timestamp_ph, final_ctrl
         )
 
-        if stamped_buf is None:
-            return jsonify({"status": "ERROR", "message": final_ctrl}), err_or_rec
-
-        return send_file(stamped_buf, as_attachment=True, download_name=f"{final_ctrl}.pdf")
-
-    except Exception as e:
-        logger.error(f"Unhandled error in upload endpoint: {e}", exc_info=True)
-        return jsonify({"status": "ERROR", "error": str(e)}), 500
-
-
-@app.route("/print", methods=["POST"])
-def print_intercept():
-    """
-    Direct ingestion stream optimized for native network print filters (CUPS backends).
-    Expects raw binary print payload in POST request data.
-    """
-    try:
-        # Client context parameters derived straight from proxy TLS attributes or header structures
-        operator_identity = request.headers.get("X-Operator-ID", "SECURE_PRINTER_PORT")
-        doc_title = request.headers.get("X-Print-Job-Title", "PRINTED_DOCUMENT")
-        
-        # Format the document title string safely to match dropdown nomenclature rules
-        doc_type = "".join(c if c.isalnum() else "_" for c in doc_title).upper()[:16]
-        
-        pdf_bytes = request.get_data()
-        if not pdf_bytes:
-            return "Empty payload stream received.", 400
-
-        stamped_buf, final_ctrl, err_or_rec = execute_truthchain_pipeline(
-            pdf_bytes, doc_type, operator_identity
+        # ── Step 9: Return stamped PDF ────────────────────────────
+        logger.info(f" Upload complete: {final_ctrl}")
+        return send_file(
+            stamped_pdf_buf,
+            as_attachment=True,
+            download_name=f"{final_ctrl}.pdf",
         )
 
-        if stamped_buf is None:
-            logger.error(f"Printer integration pipeline aborted: {final_ctrl}")
-            return jsonify({"status": "ERROR", "message": final_ctrl}), err_or_rec
-
-        logger.info(f"Printer job stamped and anchored securely via network queue: {final_ctrl}")
-        return send_file(stamped_buf, mimetype="application/pdf")
-
     except Exception as e:
-        logger.error(f"Critical system failure inside execution stream: {e}", exc_info=True)
-        return jsonify({"status": "ERROR", "error": str(e)}), 500
+        logger.error(f"Unhandled error in upload: {e}", exc_info=True)
+        return jsonify({
+            "status":  "ERROR",
+            "message": "An unexpected error occurred",
+            "error":   str(e),
+        }), 500
 
 
-# ── 9. ENTRY POINT ───────────────────────────────────────────────
+# ── 8. ENTRY POINT ───────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.getenv("FLASK_PORT", 5000))
     logger.info(f"Starting ORP Engine on 127.0.0.1:{port}")
