@@ -1,19 +1,5 @@
 // ledger.js — Public Audit Ledger Logic for records.html
 // ─────────────────────────────────────────────────────────────────
-// Fetches manifest.json and renders the paginated records table.
-//
-// BUG FIXED (.reverse()):
-//   manifest.json is written by main.py with records.insert(0, record)
-//   — newest record is always at index 0 (newest-first order).
-//   Calling .reverse() inverted this, making the oldest records appear
-//   at the top and ledgerData[0] become the oldest, not the newest.
-//   Both the table display and the "Latest Issue" stat were wrong.
-//   Fix: remove .reverse() entirely.
-//
-// BUG FIXED (null safety):
-//   item.control_number, item.timestamp, item.sha256_hash can be
-//   null or undefined on malformed records. All template expressions
-//   now use (value || fallback) guards to prevent uncaught TypeErrors.
 
 let ledgerData   = [];
 let filteredData = [];
@@ -21,6 +7,20 @@ let currentPage  = 1;
 const PAGE_SIZE  = 15;
 
 document.addEventListener('DOMContentLoaded', loadLedger);
+
+/**
+ * Strict structural context HTML escaping sanitizer
+ * Prevents XSS attacks from rogue operators injecting HTML into document_type or control_number
+ */
+function escapeHtml(unsafeString) {
+    if (!unsafeString) return '';
+    return String(unsafeString)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 async function loadLedger() {
     const tbody = document.getElementById('ledger-body');
@@ -43,7 +43,7 @@ async function loadLedger() {
         if (statTotal)  statTotal.textContent  = ledgerData.length;
 
         if (statLatest && ledgerData.length > 0) {
-            // ledgerData[0] is the NEWEST record (insert(0, ...) means newest = first)
+            // ledgerData[0] is the NEWEST record
             const ts = (ledgerData[0] && ledgerData[0].timestamp) || '';
             statLatest.textContent = ts ? ts.split(' ')[0] : '—';
         }
@@ -93,15 +93,15 @@ function renderPage() {
         return;
     }
 
-    // Null-safe template literals — every field has a fallback value.
+    // Null-safe template literals WITH strict HTML escaping
     tbody.innerHTML = slice.map(item => `
         <tr>
-            <td><span class="ctrl-num">${item.control_number || '—'}</span></td>
-            <td><span class="date-cell">${formatDate(item.timestamp)}</span></td>
-            <td><span class="badge-type">${item.document_type || 'GENERAL'}</span></td>
-            <td><span class="hash-cell">${(item.sha256_hash || '').substring(0, 16)}…</span></td>
+            <td><span class="ctrl-num">${escapeHtml(item.control_number) || '—'}</span></td>
+            <td><span class="date-cell">${escapeHtml(formatDate(item.timestamp))}</span></td>
+            <td><span class="badge-type">${escapeHtml(item.document_type) || 'GENERAL'}</span></td>
+            <td><span class="hash-cell">${escapeHtml(item.sha256_hash || '').substring(0, 16)}…</span></td>
             <td class="action-cell">
-                <a href="index.html?hash=${item.sha256_hash || ''}" class="verify-link">Verify</a>
+                <a href="verify.html?hash=${encodeURIComponent(item.sha256_hash || '')}" class="verify-link">Verify</a>
             </td>
         </tr>
     `).join('');
@@ -118,7 +118,6 @@ function renderPage() {
     if (nextBtn) nextBtn.disabled = end >= total;
 }
 
-// Called by onclick handlers in records.html: changePage(-1) / changePage(1)
 function changePage(dir) {
     const maxPage = Math.ceil(filteredData.length / PAGE_SIZE);
     currentPage   = Math.max(1, Math.min(currentPage + dir, maxPage));
@@ -126,7 +125,6 @@ function changePage(dir) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Called by oninput on the search field in records.html
 function searchLedger() {
     const term = (document.getElementById('search')?.value || '').toLowerCase().trim();
     filteredData = term
