@@ -1,4 +1,4 @@
-# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v5)
+# main.py — ORP Engine · PDF Stamp & Anchor Service (IMPROVED v4)
 # Part of the OpenResPublica TruthChain stack.
 # Must be launched via run_orp.sh — never directly.
 
@@ -242,40 +242,19 @@ def add_footer(
             packet = io.BytesIO()
             c      = canvas.Canvas(packet, pagesize=A4)
 
-            # ── FIX: THE OVERLAP PROBLEM (OPAQUE BACKGROUND PLATE) ──
-            # Creates a pristine white shield over background text, stamps, or barcodes
-            c.setFillColorRGB(1, 1, 1)
-            c.rect(24 * mm, 4 * mm, 162 * mm, 19 * mm, fill=1, stroke=0)
-
-            # Reset fill to black for text assets
-            c.setFillColorRGB(0, 0, 0)
             c.setLineWidth(0.5)
             c.line(25 * mm, 22 * mm, 185 * mm, 22 * mm)
 
-            # ── FIX: CALL TO ACTION (CTA) ──
-            # Explicit verification instructions drawn centered directly over the QR block
-            c.setFont("Helvetica-Bold", 6)
-            c.drawCentredString(172.5 * mm, 20.5 * mm, "SCAN TO VERIFY")
-
-            # ── FIX: CRYPTOGRAPHIC TRUNCATION ELIMINATED ──
-            # Full 64-character hex hash anchor passed un-truncated to the tracking table
             items = [
                 ("TIMESTAMP", timestamp),
                 ("CTRL NO",   control_number),
-                ("HASH",      sha256_hash),
+                ("HASH",      sha256_hash[:32] + "..."),
             ]
-            
             y = 18 * mm
             for label, val in items:
                 c.setFont("Helvetica-Bold", 7)
                 c.drawString(30 * mm, y, f"{label}:")
-                
-                # Dynamically drop text scaling for the hash property so it completely fits
-                if label == "HASH":
-                    c.setFont("Helvetica", 5.5)
-                else:
-                    c.setFont("Helvetica", 7)
-                    
+                c.setFont("Helvetica", 7)
                 c.drawString(55 * mm, y, str(val))
                 y -= 3.5 * mm
 
@@ -320,8 +299,23 @@ def update_manifest(record: dict) -> None:
 
 
 def run_git_command(cmd: list, description: str) -> bool:
+    """
+    Runs a git command using the ephemeral SSH agent from the boot
+    script. SSH_AUTH_SOCK and GNUPGHOME are read fresh on every call
+    so that Gunicorn worker forks always see the correct live values
+    rather than a snapshot taken at import time.
+    """
     try:
         git_env = os.environ.copy()
+
+        # ── Re-read agent socket path at call time ────────────────
+        # os.environ may be stale in a forked Gunicorn worker.
+        # The boot script exports both vars; if they drifted, reading
+        # /proc/self/environ would give the original exec values —
+        # but relying on the module-level constants (set at startup
+        # from the exec'd environment) is correct here because exec
+        # replaces the process image, so worker forks inherit the
+        # right values.  We still override explicitly to be safe.
         live_ssh_sock = os.environ.get("SSH_AUTH_SOCK") or SSH_AUTH_SOCK
         live_gpg_home = os.environ.get("GNUPGHOME")     or GPG_HOME
 
@@ -335,19 +329,44 @@ def run_git_command(cmd: list, description: str) -> bool:
         logger.debug(f"SSH_AUTH_SOCK → {live_ssh_sock}")
         logger.debug(f"GNUPGHOME     → {live_gpg_home}")
 
+        # ── SSH command ───────────────────────────────────────────
+        # BatchMode=yes  — never prompt; fail immediately if the
+        #                  agent key is not accepted. This prevents
+        #                  the 30-second hang seen when SSH falls
+        #                  back to a passphrase-protected disk key.
+        # IdentitiesOnly=yes — use ONLY what the agent offers;
+        #                      ignore ~/.ssh/id_* files entirely.
+        # IdentityAgent   — point explicitly at the gpg-agent SSH
+        #                   socket so the subprocess finds it even
+        #                   if SSH_AUTH_SOCK is not propagated by
+        #                   some intermediate layer.
         git_env["GIT_SSH_COMMAND"] = (
             "ssh -o BatchMode=yes "
             "-o StrictHostKeyChecking=no "
             "-o UserKnownHostsFile=/dev/null "
             f"-o IdentityAgent={git_env['SSH_AUTH_SOCK']}"
         )
+        #git_env["GIT_SSH_COMMAND"] = (
+        #    f"ssh "
+        #    f"-o BatchMode=yes "
+        #    f"-o StrictHostKeyChecking=no "
+        #    f"-o UserKnownHostsFile=/dev/null "
+        #    f"-o IdentitiesOnly=yes "
+        #    f"-o IdentityAgent={live_ssh_sock}"
+        #)
 
+        # ── Defensive git wrapper ─────────────────────────────────
+        # commit.gpgsign=false  — the Python subprocess must never
+        #   attempt its own GPG commit signing; signing is done by
+        #   the shell-level git config set in orp_configure_git().
+        #   Forcing it off here avoids a second gpg-agent call that
+        #   would use a different GNUPGHOME context.
         defensive_cmd = [
             "git",
             "-c", "commit.gpgsign=false",
             "-c", "user.email=marcofernandez0204@gmail.com",
             "-c", "user.name=Shandy Nazareno",
-        ] + cmd[1:]
+        ] + cmd[1:]  # drop the leading 'git' from the caller's list
 
         logger.debug(f"Git command: {' '.join(defensive_cmd)}")
 
@@ -357,7 +376,8 @@ def run_git_command(cmd: list, description: str) -> bool:
             env=git_env,
             capture_output=True,
             text=True,
-            cwd=REPO_PATH,
+            cwd=REPO_PATH,   # always run inside the repo; removes
+                             # the need for -C on every sub-command
             timeout=30,
         )
 
@@ -368,6 +388,8 @@ def run_git_command(cmd: list, description: str) -> bool:
         return True
 
     except subprocess.TimeoutExpired:
+        # Distinct log message — previously this showed as a generic
+        # CalledProcessError which obscured the real cause.
         logger.error(
             f"❌ {description} — TIMED OUT after 30s. "
             f"SSH_AUTH_SOCK={git_env.get('SSH_AUTH_SOCK', 'MISSING')} "
@@ -389,6 +411,12 @@ def run_git_command(cmd: list, description: str) -> bool:
 
 
 def _verify_ssh_agent(git_env: dict) -> None:
+    """
+    Diagnostic helper — logs which keys the SSH agent exposes to
+    the subprocess. Called once at the start of sync_to_github so
+    the operator can confirm the ephemeral key is visible.
+    Failures here are non-fatal; they only affect logging.
+    """
     try:
         result = subprocess.run(
             ["ssh-add", "-l"],
@@ -404,6 +432,11 @@ def _verify_ssh_agent(git_env: dict) -> None:
 
 
 def sync_to_github(json_path: str, record: dict) -> None:
+    """
+    Background daemon thread: writes the manifest, commits the new
+    record JSON, and pushes to GitHub Pages over SSH.
+    Includes self-healing for rebase conflicts.
+    """
     with git_lock:
         try:
             update_manifest(record)
@@ -411,15 +444,19 @@ def sync_to_github(json_path: str, record: dict) -> None:
 
             logger.info(f"Starting git sync for {anchor_hash[:16]}...")
 
+            # ── One-time diagnostic: confirm agent key is reachable ──
+            # Build a minimal env just for the check.
             probe_env = os.environ.copy()
             probe_env["SSH_AUTH_SOCK"] = (
                 os.environ.get("SSH_AUTH_SOCK") or SSH_AUTH_SOCK
             )
             _verify_ssh_agent(probe_env)
 
+            # ── Stage ─────────────────────────────────────────────
             if not run_git_command(["git", "add", "."], "Stage files"):
                 return
 
+            # ── Commit ────────────────────────────────────────────
             committed = run_git_command(
                 ["git", "commit", "-m", f"Audit: Anchor {anchor_hash}"],
                 "Commit changes",
@@ -427,14 +464,17 @@ def sync_to_github(json_path: str, record: dict) -> None:
             if not committed:
                 logger.warning("Commit failed or nothing to commit — continuing to push")
 
+            # ── Fetch ─────────────────────────────────────────────
             if not run_git_command(["git", "fetch", "origin"], "Fetch from remote"):
                 return
 
+            # ── Rebase ────────────────────────────────────────────
             rebase_ok = run_git_command(
                 ["git", "pull", "--rebase", "origin", "main"],
                 "Rebase onto remote main",
             )
 
+            # ── Self-healing on conflict ──────────────────────────
             if not rebase_ok:
                 logger.warning("⚠️ Rebase conflict — initiating self-healing...")
 
@@ -453,6 +493,7 @@ def sync_to_github(json_path: str, record: dict) -> None:
                 )
                 logger.info("✅ Self-healing complete")
 
+            # ── Push ──────────────────────────────────────────────
             if not run_git_command(
                 ["git", "push", "origin", "main"], "Push to remote"
             ):
@@ -494,6 +535,7 @@ def lock_engine():
     threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGINT)).start()
     return "Engine locked. RAM disk purged.", 200
 
+
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
     global client
@@ -505,13 +547,7 @@ def upload_pdf():
             logger.warning(f"Invalid file: {file.filename if file else 'None'}")
             return "Only PDF files are accepted.", 400
 
-        # ── FIX: DROPDOWN MISMATCH VALIDATION ──
-        # Detects unselected dropdowns or generic client-side fallback tokens
-        doc_type = request.form.get("doc_type", "").strip()
-        if not doc_type or doc_type.upper() in ["", "CHOOSE", "SELECT", "DEFAULT"]:
-            logger.warning("Upload blocked: Operator skipped selecting a definitive document type.")
-            return "Validation Error: You must select an explicit Document Type before uploading.", 400
-
+        doc_type  = request.form.get("doc_type", "BARANGAY-CERT")
         pdf_bytes = file.read()
 
         if len(pdf_bytes) > MAX_PDF_SIZE:
