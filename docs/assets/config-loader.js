@@ -1,8 +1,8 @@
-// /assets/config-loader.js
+// assets/config-loader.js
 async function loadConfig() {
     try {
-        // Fetch relative to the current URL
-        const response = await fetch('config.json');
+        // Fetching from the specified path
+        const response = await fetch('docs/config.json');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const config = await response.json();
@@ -17,8 +17,6 @@ async function loadConfig() {
             const value = getNestedValue(config, path);
             return value !== undefined ? value : match;
         });
-        
-        console.log("Config loaded successfully:", config);
     } catch (error) {
         console.error("Failed to load configuration:", error);
     }
