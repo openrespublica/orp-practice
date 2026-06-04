@@ -5,6 +5,23 @@
     "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
     "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
     "document_type": "PSA_NSO___GOOGLE",
+    "control_number": "2026-0010",
+    "sha256_hash": "881361296d354502bbaaee971d7255b6bacf54a825c77e7f68e969b5cd9aff48",
+    "timestamp": "2026-06-04 10:12 PM PHT",
+    "immudb_transaction_id": 10,
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=881361296d354502bbaaee971d7255b6bacf54a825c77e7f68e969b5cd9aff48",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"control_number\": \"2026-0010\", \"document_type\": \"PSA_NSO___GOOGLE\", \"immudb_transaction_id\": 10, \"operator_identity\": \"CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH\", \"position\": \"SK CHAIRPERSON, Barangay Motong, Dumaguete City\", \"sha256_hash\": \"881361296d354502bbaaee971d7255b6bacf54a825c77e7f68e969b5cd9aff48\", \"signer\": \"HON. SHANDY NAZARENO\", \"status\": \"VERIFIED\", \"timestamp\": \"2026-06-04 10:12 PM PHT\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=881361296d354502bbaaee971d7255b6bacf54a825c77e7f68e969b5cd9aff48\"}\n-----BEGIN PGP SIGNATURE-----\n\niJMEARYKADsWIQSzIR+814hyHxTA9lXWbtY44/b1dwUCaiGH1x0cbWFyY29mZXJu\nYW5kZXowMjA0QGdtYWlsLmNvbQAKCRDWbtY44/b1dzJWAP0VKZIAMPHazBg03NAf\n5y/St1nbPDuCSmzlHVx0IUOf+AD+MdSRPDjt+wfmsDtp5dH5jIAHrKp7QGK0toHn\ndlaeQAs=\n=Ti5m\n-----END PGP SIGNATURE-----\n",
+      "hash_anchor": "ca63b126445a36f3fc3cadd0a0918ed5e0bc4d10f60ab74ded770e5c147160d4",
+      "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE"
+    }
+  },
+  {
+    "status": "VERIFIED",
+    "signer": "HON. SHANDY NAZARENO",
+    "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
+    "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
+    "document_type": "PSA_NSO___GOOGLE",
     "control_number": "2026-0009",
     "sha256_hash": "de865f535f68e5b37e48e2a17e3d61ca6490fa8341a5494987938fe8baa9f559",
     "timestamp": "2026-06-04 10:12 PM PHT",
