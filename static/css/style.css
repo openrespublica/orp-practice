@@ -653,8 +653,8 @@ tr:hover {
     resize: vertical;
 }
 
-/* Select dropdown arrow styling */
-.form-select {
+/* Standard <select> dropdown arrow styling */
+select.form-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23003366'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 14l-7 7m0 0l-7-7m7 7V3'%3E%3C/path%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -663,6 +663,22 @@ tr:hover {
     padding-right: 2.5rem;
 }
 
+/* Datalist <input> dropdown styling (removes double-arrow conflict) */
+input.form-select {
+    background-image: none;
+    padding-right: 0.75rem;
+}
+
+/* Style the native WebKit datalist arrow to match the theme */
+input.form-select::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+}
+
+input.form-select::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
 
 /* ── 12. BUTTONS ───────────────────────────────────────────────── */
 

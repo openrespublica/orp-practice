@@ -198,15 +198,24 @@
 
                         <div class="form-group">
                             <label class="form-label" for="uploadDocType">Document Type</label>
-                            <select class="form-select" id="uploadDocType" name="doc_type" required>
+                            <input type="text" class="form-select" id="uploadDocType" name="doc_type" list="docTypeOptions" 
+                                   placeholder="Select or type (e.g. GOOD-MORAL)"
+                                   pattern="[A-Za-z0-9\-\s]+" 
+                                   title="Only letters, numbers, spaces, and hyphens are allowed."
+                                   style="text-transform: uppercase;"
+                                   required autocomplete="off">
+                            
+                            <datalist id="docTypeOptions">
                                 <option value="BARANGAY-CERT">Barangay Certificate</option>
                                 <option value="INDIGENCY-CERT">Certificate of Indigency</option>
                                 <option value="RESIDENCY-CERT">Certificate of Residency</option>
                                 <option value="CLEARANCE">Barangay Clearance</option>
                                 <option value="BUSINESS-PERMIT">Business Permit</option>
                                 <option value="DICT-INQUIRY">DICT Inquiry (RA 11337)</option>
-                                <option value="OTHER">Other</option>
-                            </select>
+                            </datalist>
+                            <small class="file-drop-hint" style="margin-top: 0.5rem; display: block; text-align: left;">
+                                Pick from the list or type a custom document name.
+                            </small>
                         </div>
 
                         <button type="submit" class="btn-submit" id="uploadBtn" aria-label="Submit PDF for stamping, hashing and anchoring to ledger">

@@ -268,11 +268,23 @@ function initUploadForm() {
     form.addEventListener('submit', async e => {
         e.preventDefault();
 
-        const file    = document.getElementById('pdfFile').files[0];
-        const docType = document.getElementById('uploadDocType').value;
-        const btn     = document.getElementById('uploadBtn');
+//        const file    = document.getElementById('pdfFile').files[0];
+//        const docType = document.getElementById('uploadDocType').value;
+//        const btn     = document.getElementById('uploadBtn');
+//        const progress = document.getElementById('uploadProgress');
+//        const result = document.getElementById('uploadResult');
+        const file     = document.getElementById('pdfFile').files[0];
+        const docInput = document.getElementById('uploadDocType');
+        
+        // ── FIX: INPUT SANITIZER ──
+        // Force uppercase, strip illegal filesystem characters, and swap spaces for hyphens.
+        // This executes instantly before the data is packed into the FormData.
+        docInput.value = docInput.value.toUpperCase().replace(/[^A-Z0-9\-\s]/g, '').trim().replace(/\s+/g, '-');
+        const docType  = docInput.value;
+        
+        const btn      = document.getElementById('uploadBtn');
         const progress = document.getElementById('uploadProgress');
-        const result = document.getElementById('uploadResult');
+        const result   = document.getElementById('uploadResult');
 
         if (!file) { 
             alert('Please select a PDF file.');
