@@ -8,7 +8,7 @@
      * file regardless of which sub-page calls it.
      */
     function resolveConfigUrl() {
-        return '/orp-practice/config.json';
+        return '/config.json';
     }
 
     const CACHE_WINDOW_MS = 5 * 60 * 1000;
