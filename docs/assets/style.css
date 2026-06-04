@@ -3,208 +3,167 @@
    style.css — single source of truth for all portal styling
 
    Structure:
-     1.  CSS Variables (global design tokens)
+     1.  CSS Variables
      2.  Base / Reset
-     3.  Topbar
-     4.  Layout (sidebar + main content)
-     5.  Sidebar & Navigation
-     6.  Panels
+     3.  Topbar (admin panel)
+     4.  Layout (sidebar + main content, admin)
+     5.  Sidebar & Navigation (admin)
+     6.  Panels (admin)
      7.  Tables & Ledger
      8.  Dashboard Stats
      9.  Civic Section Block
      10. Alerts
      11. Forms & Inputs
      12. Buttons
-     13. File Drop Zone
-     14. Progress Indicator
-     15. Result Box
+     13. File Drop Zone (admin)
+     14. Progress Indicator (admin)
+     15. Result Box (admin)
      16. Spinner
-     17. Footer
+     17. Public Portal — Shared Header
+     18. Public Portal — Verify page (verify.html)
+     19. Public Portal — Ledger page (records.html)
+     20. Public Portal — About page (about.html)
+     21. Public Portal — Footer Nav
+     22. Site Footer
    ============================================================ */
 
-/* Google Fonts — loaded once, used via CSS variables below.
-   Playfair Display : panel titles, stat values (serif, civic feel)
-   Source Sans 3    : body text, labels, UI copy (clean, readable)
-   IBM Plex Mono    : hashes, control numbers, code (fixed-width) */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@300;400;500;600&display=swap');
 
 
-/* ── 1. CSS VARIABLES ────────────────────────────────────────────
-   Define all colors and fonts once here — the "global scope" for styling.
-   To change the brand color across the entire portal, change one line here.
-   All rules below reference these variables via var(--name). */
+/* ── 1. CSS VARIABLES ─────────────────────────────────────────── */
 :root {
-    /* Brand colors */
-    --navy:       #002147;   /* darkest — used for hover states */
-    --navy-deep:  #001530;   /* topbar background */
-    --navy-mid:   #003366;   /* primary action color — buttons, active nav, titles */
-    --gold:       #C9A84C;   /* accent — topbar border, section markers, badges */
-    --gold-pale:  #FDF3D0;   /* light gold — badge backgrounds, hover tints */
+  --navy:       #002147;
+  --navy-deep:  #001530;
+  --navy-mid:   #003366;
+  --gold:       #C9A84C;
+  --gold-pale:  #FDF3D0;
+  --white:      #FAFAF7;
+  --ink:        #1A1A2E;
+  --muted:      #6B7280;
+  --border:     rgba(0, 33, 71, 0.1);
 
-    /* Neutral colors */
-    --white:  #FAFAF7;   /* off-white — page background alternative */
-    --ink:    #1A1A2E;   /* body text */
-    --muted:  #6B7280;   /* secondary text, labels, placeholders */
-    --border: rgba(0, 33, 71, 0.1);  /* subtle borders throughout */
+  --green:       #1E7A3E;
+  --green-pale:  #F0FAF4;
+  --red:         #B91C1C;
+  --red-pale:    #FEF2F2;
+  --amber:       #854d0e;
+  --amber-pale:  #FFFBEB;
+  --blue-pale:   #EFF6FF;
 
-    /* Semantic colors */
-    --green:      #1E7A3E;   /* success states */
-    --green-pale: #F0FAF4;   /* success backgrounds */
-    --red:        #B91C1C;   /* error states */
-    --red-pale:   #FEF2F2;   /* error backgrounds */
-    --blue-pale:  #EFF6FF;   /* info alert background */
-
-    /* Typography */
-    --font-serif: 'Playfair Display', serif;
-    --font-sans:  'Source Sans 3', sans-serif;
-    --font-mono:  'IBM Plex Mono', monospace;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans:  'Source Sans 3', system-ui, sans-serif;
+  --font-mono:  'IBM Plex Mono', 'Courier New', monospace;
 }
 
 
-/* ── 2. BASE / RESET ─────────────────────────────────────────────
-   Remove browser default margin/padding, set the base font and color. */
+/* ── 2. BASE / RESET ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    margin: 0;
-    padding: 0;
-    font-family: var(--font-sans);
-    background: #F0F2F5;
-    color: var(--ink);
-    line-height: 1.6;
+  font-family: var(--font-sans);
+  background: #F0F2F5;
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
 }
 
 
-/* ── 3. TOPBAR ───────────────────────────────────────────────────
-   Sticky header — stays at the top as the user scrolls.
-   z-index:100 keeps it above all panel content. */
+/* ── 3. TOPBAR (admin) ────────────────────────────────────────── */
 .topbar {
-    background: var(--navy-deep);
-    border-bottom: 3px solid var(--gold);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+  background: var(--navy-deep);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .topbar-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-
-/* Brand — logo badge + name + subtitle */
 .brand { display: flex; align-items: center; gap: 0.85rem; }
 .brand-badge {
-    width: 36px; height: 36px;
-    background: var(--gold);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
+  width: 36px; height: 36px;
+  background: var(--gold);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 .brand h1 { font-family: var(--font-serif); font-size: 1rem; color: #fff; margin: 0; }
 .brand p  { font-size: 0.65rem; color: var(--gold); margin: 0; opacity: 0.8; }
 
-/* Right side — status indicator + lock button */
 .topbar-right { color: #fff; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
-
-/* Animated green dot — "engine online" indicator */
 .status-dot {
-    width: 8px; height: 8px;
-    background: #22C55E;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #22C55E;  /* glow effect */
+  width: 8px; height: 8px;
+  background: #22C55E;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #22C55E;
 }
-
-/* Lock Engine button — styled to match the topbar, not a full button */
 .logout-link {
-    color: #fff;
-    font-weight: 600;
-    opacity: 0.8;
-    background: none;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-family: inherit;
-    cursor: pointer;
-    transition: opacity 0.2s, background 0.2s;
+  color: #fff; font-weight: 600; opacity: 0.8;
+  background: none; border: 1px solid rgba(255,255,255,0.3);
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 0.75rem; font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
 }
-.logout-link:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+.logout-link:hover { opacity: 1; background: rgba(255,255,255,0.1); }
 
 
-/* ── 4. LAYOUT ───────────────────────────────────────────────────
-   Two-column flex layout: sidebar (fixed) + main content (flexible).
-   max-width centers the content on wide screens. */
+/* ── 4. LAYOUT (admin) ────────────────────────────────────────── */
 .layout {
-    display: flex;
-    max-width: 1200px;
-    margin: 1.5rem auto;
-    gap: 1.5rem;
-    padding: 0 1.5rem;
-    min-height: 80vh;
+  display: flex;
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  min-height: 80vh;
 }
 .sidebar      { width: 260px; flex-shrink: 0; }
 .main-content { flex-grow: 1; min-width: 0; }
-/* min-width:0 prevents flex children from overflowing on narrow screens */
 
 
-/* ── 5. SIDEBAR & NAVIGATION ─────────────────────────────────────
-   Section headers are purely visual labels — not interactive. */
+/* ── 5. SIDEBAR & NAVIGATION (admin) ─────────────────────────── */
 .sidebar-section {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    font-weight: 700;
-    margin: 1.5rem 0 0.5rem 0.75rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 700;
+  margin: 1.5rem 0 0.5rem 0.75rem;
 }
-
-/* Nav items — both <button> and <a> use this class for consistent appearance. */
 .nav-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 0.85rem 1rem;
-    border: none;
-    background: none;
-    border-radius: 8px;
-    color: var(--navy-mid);
-    font-family: inherit;
-    font-weight: 500;
-    font-size: 0.88rem;
-    cursor: pointer;
-    text-align: left;
-    text-decoration: none;
-    margin-bottom: 0.25rem;
-    box-sizing: border-box;
-    transition: background 0.2s;
+  display: flex; align-items: center;
+  width: 100%; padding: 0.85rem 1rem;
+  border: none; background: none; border-radius: 8px;
+  color: var(--navy-mid); font-family: inherit;
+  font-weight: 500; font-size: 0.88rem;
+  cursor: pointer; text-align: left;
+  text-decoration: none; margin-bottom: 0.25rem;
+  box-sizing: border-box; transition: background 0.2s;
 }
-.nav-item:hover  { background: rgba(0, 33, 102, 0.05); }
+.nav-item:hover  { background: rgba(0,33,102,0.05); }
 .nav-item.active { background: var(--navy-mid); color: #fff; }
-
-/* Icon inside each nav item */
 .nav-icon { margin-right: 12px; font-size: 1.1rem; }
 
 
-/* ── 6. PANELS ───────────────────────────────────────────────────
-   All panels exist in the DOM. CSS hides them all by default.
-   JavaScript adds/removes "active" to show the correct one. */
+/* ── 6. PANELS (admin) ────────────────────────────────────────── */
 .panel {
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    display: none;  /* hidden by default */
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: none;
 }
-.panel.active { display: block; }  /* shown when JS adds "active" */
-
+.panel.active { display: block; }
 .panel-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 1rem;
 }
 .panel-icon     { font-size: 1.8rem; }
 .panel-title    { font-family: var(--font-serif); font-size: 1.25rem; color: var(--navy-mid); font-weight: 700; }
@@ -212,383 +171,681 @@ body {
 .panel-body     { padding: 1.5rem; }
 
 
-/* ── 7. TABLES & LEDGER ──────────────────────────────────────────
-   Used in the Local Ledger panel. */
+/* ── 7. TABLES & LEDGER ───────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; }
 th {
-    text-align: left;
-    padding: 1rem;
-    background: #F9FAFB;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
+  text-align: left; padding: 1rem;
+  background: #F9FAFB;
+  font-size: 0.7rem; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted);
+  border-bottom: 1px solid var(--border);
 }
-td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.85rem;
-}
+td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 
-/* Footer bar below the table — holds the record count and pagination buttons. */
 .table-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem; color: var(--muted);
+  border-top: 1px solid var(--border);
 }
 .page-btn {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.78rem;
-    font-family: inherit;
-    border: 1px solid var(--border);
-    background: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--navy-mid);
-    transition: background 0.15s;
+  padding: 0.35rem 0.75rem; font-size: 0.78rem;
+  font-family: inherit; border: 1px solid var(--border);
+  background: #fff; border-radius: 6px;
+  cursor: pointer; color: var(--navy-mid);
+  transition: background 0.15s;
 }
 .page-btn:hover:not(:disabled) { background: var(--gold-pale); }
 .page-btn:disabled { opacity: 0.4; cursor: default; }
 
-/* Monospace hash/ID display — used in table cells */
 .mono {
-    font-family: var(--font-mono);
-    background: #F1F5F9;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+  font-family: var(--font-mono);
+  background: #F1F5F9; padding: 2px 6px;
+  border-radius: 4px; font-size: 0.75rem;
 }
-
-/* Document type badge — used in table cells */
 .badge-type {
-    background: var(--gold-pale);
-    color: #8a6a14;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
+  display: inline-block;
+  background: rgba(0,33,71,0.07);
+  color: var(--navy-mid);
+  font-size: 0.65rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
 }
-
-/* Verify link in ledger table */
 .btn-outline {
-    display: inline-block;
-    padding: 0.25rem 0.65rem;
-    background: transparent;
-    color: var(--navy-mid);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background 0.15s;
+  display: inline-block; padding: 0.25rem 0.65rem;
+  background: transparent; color: var(--navy-mid);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 0.75rem; font-weight: 600;
+  text-decoration: none; transition: background 0.15s;
 }
 .btn-outline:hover { background: var(--gold-pale); }
 
+/* Empty / loading row inside tbody */
+.table-msg {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
 
-/* ── 8. DASHBOARD STATS ──────────────────────────────────────────
-   Four stat cards in a responsive grid. */
+
+/* ── 8. DASHBOARD STATS ───────────────────────────────────────── */
 .stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 .stat-card {
-    background: #F9FAFB;
-    border: 1px solid var(--border);
-    border-top: 3px solid var(--navy-mid);  /* colored top accent */
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
+  background: #F9FAFB;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--navy-mid);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
 }
-.stat-card--gold { border-top-color: var(--gold); }  /* variant for "Last Issue" */
+.stat-card--gold  { border-top-color: var(--gold); }
+.stat-card.gold-accent .stat-value { color: #8a6a14; }
 
 .stat-value {
-    font-family: var(--font-serif);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--navy-mid);
-    line-height: 1.1;
+  font-family: var(--font-serif);
+  font-size: 1.6rem; font-weight: 700;
+  color: var(--navy-mid); line-height: 1.1;
 }
-.stat-value--green { color: var(--green); }  /* for the ✓ immudb status */
-
+.stat-value--green { color: var(--green); }
 .stat-label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    margin-top: 0.25rem;
+  font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted);
+  margin-top: 0.25rem;
 }
 
 
-/* ── 9. CIVIC SECTION BLOCK ──────────────────────────────────────
-   Gold left-border block used for descriptive text inside panels.
-   The section ID (e.g. "01 — Upload") is a visual label only. */
+/* ── 9. CIVIC SECTION BLOCK ───────────────────────────────────── */
 .civic-section {
-    border-left: 3px solid var(--gold);
-    padding: 0.75rem 1rem;
-    background: #FAFAF7;
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 1.25rem;
+  border-left: 3px solid var(--gold);
+  padding: 0.75rem 1rem;
+  background: #FAFAF7;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.25rem;
 }
 .civic-section-id {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--gold);
-    font-weight: 700;
-    display: block;
-    margin-bottom: 0.35rem;
+  font-size: 0.65rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--gold);
+  font-weight: 700; display: block; margin-bottom: 0.35rem;
 }
 .civic-body     { font-size: 0.88rem; color: var(--muted); }
-.civic-body--sm { font-size: 0.83rem; }  /* slightly smaller for dense panels */
+.civic-body--sm { font-size: 0.83rem; }
 .civic-body p   { margin: 0; }
 
 
-/* ── 10. ALERTS ──────────────────────────────────────────────────
-   Warning and info banners in the Dashboard panel. */
+/* ── 10. ALERTS ───────────────────────────────────────────────── */
 .alert-group { display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem; }
-
-.alert {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.83rem;
-    line-height: 1.5;
-}
-.alert-warning {
-    background: #FFFBEB;
-    border: 1px solid #FDE68A;
-    color: #92400E;
-}
-.alert-info {
-    background: var(--blue-pale);
-    border: 1px solid #BFDBFE;
-    color: #1E3A8A;
-}
+.alert { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.83rem; line-height: 1.5; }
+.alert-warning { background: var(--amber-pale); border: 1px solid #FDE68A; color: #92400E; }
+.alert-info    { background: var(--blue-pale);  border: 1px solid #BFDBFE; color: #1E3A8A; }
 
 
-/* ── 11. FORMS & INPUTS ──────────────────────────────────────────
-   Used in the upload form. */
-.form-group { margin-bottom: 1.25rem; }
+/* ── 11. FORMS & INPUTS ───────────────────────────────────────── */
+.form-group   { margin-bottom: 1.25rem; }
+.form-label   { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--navy-mid); }
+.form-hint    { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
 
-.form-label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--navy-mid);
-}
-
-.form-hint {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 0.4rem;
-}
-
-/* Shared input styles — select gets the same treatment as text inputs */
 .form-select,
 .form-input,
 .form-textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 0.9rem;
-    box-sizing: border-box;
-    background: #fff;
-    transition: border-color 0.2s;
+  width: 100%; padding: 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px; font-family: inherit;
+  font-size: 0.9rem; box-sizing: border-box;
+  background: #fff; transition: border-color 0.2s;
 }
 .form-select:focus,
 .form-input:focus,
-.form-textarea:focus {
-    outline: none;
-    border-color: var(--navy-mid);  /* highlight on focus */
+.form-textarea:focus  { outline: none; border-color: var(--navy-mid); }
+.form-textarea        { min-height: 140px; resize: vertical; }
+
+/* Shake + red border on invalid input */
+.form-input.input-error {
+  border-color: var(--red);
+  animation: shake 0.35s ease;
 }
-.form-textarea { min-height: 140px; resize: vertical; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
 
 
-/* ── 12. BUTTONS ───────────────────────────────────────────────── */
-
-/* Primary submit button — full width, navy */
+/* ── 12. BUTTONS ──────────────────────────────────────────────── */
 .btn-submit {
-    width: 100%;
-    padding: 0.85rem;
-    background: var(--navy-mid);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-family: inherit;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    margin-top: 0.5rem;
-    transition: background 0.2s;
+  width: 100%; padding: 0.85rem;
+  background: var(--navy-mid); color: #fff;
+  border: none; border-radius: 8px;
+  font-family: inherit; font-weight: 600;
+  font-size: 0.9rem; cursor: pointer;
+  margin-top: 0.5rem; transition: background 0.2s;
 }
 .btn-submit:hover    { background: var(--navy); }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-/* disabled state — set by portal.js to prevent duplicate submissions */
+
+/* Smaller secondary retry button in verify failure state */
+.btn-retry {
+  display: inline-block;
+  margin-top: 1.5rem; padding: 0.65rem 2rem;
+  background: var(--navy-mid); color: #fff;
+  border: none; border-radius: 8px;
+  font-family: inherit; font-weight: 600;
+  font-size: 0.88rem; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-retry:hover { background: var(--navy); }
 
 
-/* ── 13. FILE DROP ZONE ──────────────────────────────────────────
-   The styled drop zone that sits over the hidden <input type="file">.
-   portal.js handles the click delegation and drag-and-drop logic. */
+/* ── 13. FILE DROP ZONE (admin) ───────────────────────────────── */
 .file-drop {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+  border: 2px dashed var(--border);
+  border-radius: 12px; padding: 2rem;
+  text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
 }
-.file-drop:hover  { border-color: var(--navy-mid); }
-
-/* dragover class added/removed by portal.js during drag events */
+.file-drop:hover   { border-color: var(--navy-mid); }
 .file-drop.dragover {
-    border-color: var(--navy-mid);
-    background: rgba(0, 33, 102, 0.02);
+  border-color: var(--navy-mid);
+  background: rgba(0,33,102,0.02);
 }
-
-.file-drop-icon { font-size: 2rem; margin-bottom: 0.5rem; }
-.file-drop-hint { margin-top: 0.2rem; font-size: 0.75rem; color: var(--muted); }
-
-/* Badge shown after a file is selected — displays filename + size */
+.file-drop-icon    { font-size: 2rem; margin-bottom: 0.5rem; }
+.file-drop-hint    { margin-top: 0.2rem; font-size: 0.75rem; color: var(--muted); }
 .file-name-badge {
-    display: inline-block;
-    margin-top: 0.6rem;
-    padding: 3px 10px;
-    background: var(--green-pale);
-    color: var(--green);
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
+  display: inline-block; margin-top: 0.6rem;
+  padding: 3px 10px; background: var(--green-pale);
+  color: var(--green); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 0.78rem;
 }
 
 
-/* ── 14. PROGRESS INDICATOR ──────────────────────────────────────
-   Shows animated steps while Flask processes the upload.
-   Hidden by default — portal.js shows it on form submit. */
-.progress-wrap { display: none; margin-top: 1.25rem; }
-
-/* Row of step pills */
+/* ── 14. PROGRESS INDICATOR (admin) ──────────────────────────── */
+.progress-wrap  { display: none; margin-top: 1.25rem; }
 .progress-steps { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-
 .progress-step {
-    flex: 1;
-    text-align: center;
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.35rem 0;
-    border-radius: 6px;
-    background: #F1F5F9;
-    color: var(--muted);
-    border: 1.5px solid var(--border);
-    transition: background 0.25s, color 0.25s, border-color 0.25s;
+  flex: 1; text-align: center;
+  font-size: 0.72rem; font-weight: 600;
+  padding: 0.35rem 0; border-radius: 6px;
+  background: #F1F5F9; color: var(--muted);
+  border: 1.5px solid var(--border);
+  transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
-/* Current step — highlighted in navy */
-.progress-step.active {
-    background: var(--navy-mid);
-    color: #fff;
-    border-color: var(--navy-mid);
-}
-/* Completed steps — green */
-.progress-step.done {
-    background: var(--green-pale);
-    color: var(--green);
-    border-color: #86EFAC;
-}
+.progress-step.active { background: var(--navy-mid); color: #fff; border-color: var(--navy-mid); }
+.progress-step.done   { background: var(--green-pale); color: var(--green); border-color: #86EFAC; }
 
-/* Thin progress bar beneath the steps */
-.progress-bar-wrap {
-    height: 5px;
-    background: #E5E7EB;
-    border-radius: 99px;
-    overflow: hidden;
-}
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    background: var(--navy-mid);
-    border-radius: 99px;
-    transition: width 0.5s ease;  /* smooth fill animation */
-}
+.progress-bar-wrap { height: 5px; background: #E5E7EB; border-radius: 99px; overflow: hidden; }
+.progress-bar      { height: 100%; width: 0%; background: var(--navy-mid); border-radius: 99px; transition: width 0.5s ease; }
 
 
-/* ── 15. RESULT BOX ──────────────────────────────────────────────
-   Shows after Flask responds — either success or error.
-   Hidden by default — portal.js populates and reveals it. */
-.result-box {
-    display: none;
-    margin-top: 1.25rem;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1.5px solid var(--border);
-}
-.result-success { border-color: #86EFAC; }  /* green border on success */
-.result-error   { border-color: #FCA5A5; }  /* red border on error */
+/* ── 15. RESULT BOX (admin) ───────────────────────────────────── */
+.result-box     { display: none; margin-top: 1.25rem; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border); }
+.result-success { border-color: #86EFAC; }
+.result-error   { border-color: #FCA5A5; }
 
 .result-header { padding: 0.85rem 1rem; background: #F9FAFB; border-bottom: 1px solid var(--border); }
 .result-header h4 { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--navy-mid); }
 .result-success .result-header { background: var(--green-pale); }
 .result-error   .result-header { background: var(--red-pale); }
-
 .result-body { padding: 1rem; }
 
-/* Key/value grid for success details (File, Type, Status) */
-.result-kv {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.4rem 1rem;
-    font-size: 0.83rem;
-    align-items: baseline;
-}
+.result-kv { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; font-size: 0.83rem; align-items: baseline; }
 .result-key { font-weight: 700; color: var(--muted); white-space: nowrap; }
 .result-val { color: var(--ink); word-break: break-all; }
 
-/* Download button — appears inside the result box on success.
-   Uses createObjectURL blob — not a server URL. */
 .download-btn {
-    display: inline-block;
-    margin-top: 0.85rem;
-    padding: 0.55rem 1.1rem;
-    background: var(--navy-mid);
-    color: #fff;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 0.83rem;
-    font-weight: 600;
-    transition: background 0.2s;
+  display: inline-block; margin-top: 0.85rem;
+  padding: 0.55rem 1.1rem; background: var(--navy-mid);
+  color: #fff; border-radius: 8px; text-decoration: none;
+  font-size: 0.83rem; font-weight: 600; transition: background 0.2s;
 }
 .download-btn:hover { background: var(--navy); }
 
 
-/* ── 16. SPINNER ─────────────────────────────────────────────────
-   CSS-only loading animation — no JS, no images.
-   Used in the ledger loading state. */
+/* ── 16. SPINNER ──────────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
-
 .spinner {
-    width: 24px; height: 24px;
-    border: 3px solid var(--border);
-    border-top-color: var(--navy-mid);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    display: inline-block;
-    vertical-align: middle;
+  width: 24px; height: 24px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+/* Dark spinner variant (on light backgrounds) */
+.spinner--dark {
+  border-color: var(--border);
+  border-top-color: var(--navy-mid);
+}
+
+/* Loading row inside table */
+.table-msg .spinner {
+  border-color: rgba(0,51,102,0.12);
+  border-top-color: var(--navy-mid);
+  margin: 0 auto 1rem;
+  display: block;
 }
 
 
-/* ── 17. FOOTER ──────────────────────────────────────────────────
-   Simple text footer — identity and attribution only. */
+/* ─────────────────────────────────────────────────────────────────
+   PUBLIC PORTAL STYLES
+   Used by: about.html, index.html, records.html, verify.html
+   ───────────────────────────────────────────────────────────────── */
+
+/* ── 17. PUBLIC PORTAL — SHARED HEADER ───────────────────────── */
+.site-header {
+  background: var(--navy-deep);
+  border-bottom: 3px solid var(--gold);
+  position: relative;
+  overflow: hidden;
+}
+/* Subtle gold grid pattern */
+.site-header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(201,168,76,0.04) 40px, rgba(201,168,76,0.04) 41px),
+    repeating-linear-gradient(0deg,  transparent, transparent 40px, rgba(201,168,76,0.04) 40px, rgba(201,168,76,0.04) 41px);
+  pointer-events: none;
+}
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 2rem;
+  text-align: center;
+  position: relative;
+}
+/* records.html uses wider header */
+.header-inner--wide { max-width: 1000px; }
+
+.republic-label {
+  font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 0.5rem;
+}
+.seal-line {
+  display: flex; align-items: center; justify-content: center;
+  gap: 1rem; margin-bottom: 1.25rem;
+}
+.seal-ornament {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold), transparent);
+  max-width: 120px;
+}
+.seal-diamond {
+  width: 10px; height: 10px;
+  background: var(--gold);
+  transform: rotate(45deg); flex-shrink: 0;
+}
+.site-header h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 700; color: var(--white);
+  line-height: 1.2; margin-bottom: 0.4rem;
+}
+.site-header .subtitle {
+  font-size: 0.85rem;
+  color: rgba(201,168,76,0.85);
+  letter-spacing: 0.05em;
+}
+
+
+/* ── 18. PUBLIC PORTAL — VERIFY PAGE (verify.html) ───────────── */
+.verify-page-main {
+  flex: 1; max-width: 700px;
+  margin: 0 auto; width: 100%;
+  padding: 3rem 1.5rem;
+}
+
+/* The outer card that wraps all dynamic content */
+.verify-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,33,71,0.06);
+  overflow: hidden;
+}
+
+/* Status banner — top stripe of the verify card */
+.status-banner {
+  padding: 1.25rem 1.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.status-icon {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 50%;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.status-verified { background: var(--green); }
+.status-pending  { background: var(--amber); }
+.status-error    { background: var(--red); }
+
+/* Card body — the content area below the banner */
+.card-body { padding: 2rem; }
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem; color: var(--navy-mid);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem; margin-top: 1.75rem;
+}
+.card-body .section-title:first-child { margin-top: 0; }
+
+/* Two-column responsive grid for data fields */
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 500px) { .data-grid { grid-template-columns: 1fr 1fr; } }
+
+.data-item   { display: flex; flex-direction: column; gap: 0.25rem; }
+.data-label  { font-size: 0.72rem; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
+.data-value  { font-size: 0.95rem; font-weight: 500; word-break: break-word; }
+.badge       { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: #e2e8f0; color: var(--navy-deep); }
+
+/* Cryptographic audit items */
+.crypto-proofs { display: flex; flex-direction: column; gap: 0.75rem; }
+.crypto-item {
+  display: flex; align-items: flex-start; gap: 0.9rem;
+  background: #F9FAFB; border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.9rem 1rem;
+}
+.crypto-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1.4; }
+.crypto-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.crypto-text strong { font-size: 0.82rem; color: var(--navy-mid); }
+.crypto-text span   { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); word-break: break-all; }
+
+/* Manual form (no ?hash= in URL) */
+.fallback-form { }
+.fallback-text {
+  font-size: 0.88rem; color: var(--muted);
+  line-height: 1.7; margin-bottom: 1.5rem;
+}
+
+
+/* ── 19. PUBLIC PORTAL — LEDGER PAGE (records.html) ──────────── */
+.ledger-main {
+  flex: 1; max-width: 1000px;
+  margin: 0 auto; width: 100%;
+  padding: 2rem 1.5rem;
+}
+
+/* 3-column stat cards */
+.ledger-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.ledger-stats .stat-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+.ledger-stats .stat-card .stat-value {
+  font-family: var(--font-serif);
+  font-size: 1.75rem; font-weight: 700;
+  color: var(--navy-mid); line-height: 1;
+}
+.ledger-stats .stat-card .stat-label {
+  font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-top: 0.3rem;
+}
+
+/* Toolbar above the table */
+.toolbar {
+  display: flex;
+  align-items: center; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.toolbar-left h2   { font-family: var(--font-serif); font-size: 1.1rem; color: var(--navy-mid); font-weight: 700; }
+.toolbar-left p    { font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+
+.search-wrap  { position: relative; flex-shrink: 0; }
+.search-icon  {
+  position: absolute; left: 0.75rem; top: 50%;
+  transform: translateY(-50%); color: var(--muted);
+  font-size: 0.85rem; pointer-events: none;
+}
+.search-input {
+  font-family: var(--font-sans); font-size: 0.85rem;
+  padding: 0.6rem 1rem 0.6rem 2.25rem;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  background: #fff; color: var(--ink); outline: none;
+  width: 260px; transition: border-color 0.2s;
+}
+.search-input::placeholder { color: #bbb; }
+.search-input:focus { border-color: var(--navy-mid); }
+
+/* The white card wrapping the table */
+.table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,33,71,0.06);
+}
+
+/* Public ledger table columns */
+col.col-ctrl   { width: 28%; }
+col.col-date   { width: 14%; }
+col.col-type   { width: 18%; }
+col.col-hash   { width: 26%; }
+col.col-action { width: 14%; }
+
+/* Table specific overrides for the public ledger */
+.table-wrap thead { background: var(--navy-deep); }
+.table-wrap thead th {
+  font-family: var(--font-sans);
+  font-size: 0.65rem; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(201,168,76,0.9);
+  padding: 0.85rem 1rem;
+  text-align: left; background: transparent;
+}
+.table-wrap thead th:last-child { text-align: center; }
+
+.table-wrap tbody tr { border-bottom: 1px solid rgba(0,33,71,0.07); transition: background 0.15s; }
+.table-wrap tbody tr:last-child { border-bottom: none; }
+.table-wrap tbody tr:hover { background: rgba(0,33,71,0.03); }
+.table-wrap tbody td { padding: 0.85rem 1rem; font-size: 0.875rem; vertical-align: middle; }
+
+.ctrl-num  { font-family: var(--font-sans); font-weight: 600; color: var(--navy-mid); font-size: 0.82rem; }
+.date-cell { font-size: 0.8rem; color: var(--muted); }
+.hash-cell { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.action-cell { text-align: center; }
+.verify-link {
+  display: inline-block; font-size: 0.75rem; font-weight: 600;
+  color: var(--navy-mid); border: 1px solid rgba(0,51,102,0.25);
+  border-radius: 5px; padding: 4px 12px;
+  text-decoration: none; letter-spacing: 0.03em; white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.verify-link:hover { background: var(--navy-mid); color: #fff; border-color: var(--navy-mid); }
+
+.table-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(0,33,71,0.02);
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--muted);
+  flex-wrap: wrap; gap: 0.5rem;
+}
+.page-controls { display: flex; gap: 0.4rem; }
+
+
+/* ── 20. PUBLIC PORTAL — ABOUT PAGE (about.html) ─────────────── */
+.about-main { flex: 1; }
+.content-wrap { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+.intro-section { text-align: center; margin-bottom: 3rem; }
+.intro-section h2 { font-family: var(--font-serif); font-size: 1.6rem; color: var(--navy-mid); margin-bottom: 0.75rem; }
+.intro-section p  { font-size: 1rem; color: var(--muted); line-height: 1.75; max-width: 600px; margin: 0 auto; }
+
+.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 3rem; }
+.pillar-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0,33,71,0.05);
+}
+.pillar-icon {
+  width: 40px; height: 40px;
+  background: rgba(0,51,102,0.08); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; margin-bottom: 1rem;
+}
+.pillar-card h3 { font-family: var(--font-serif); font-size: 1rem; color: var(--navy-mid); margin-bottom: 0.5rem; }
+.pillar-card p  { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
+
+.section-heading {
+  font-family: var(--font-serif);
+  font-size: 1.25rem; color: var(--navy-mid);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--gold);
+  display: inline-block;
+}
+
+.process-steps { display: grid; gap: 0.75rem; margin-bottom: 3rem; }
+.step {
+  display: flex; align-items: flex-start; gap: 1rem;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+}
+.step-num {
+  width: 28px; height: 28px;
+  background: var(--navy-mid); color: #fff;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 600; flex-shrink: 0; margin-top: 1px;
+}
+.step-content h4 { font-size: 0.9rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+.step-content p  { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+.step-content code {
+  font-family: var(--font-mono); font-size: 0.75rem;
+  background: rgba(0,33,71,0.06); padding: 1px 5px;
+  border-radius: 3px; color: var(--navy-mid);
+}
+
+/* Official band — full-bleed dark stripe */
+.official-band {
+  background: var(--navy-deep);
+  border-top: 3px solid var(--gold);
+  border-bottom: 3px solid var(--gold);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+.official-band::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(201,168,76,0.04) 40px, rgba(201,168,76,0.04) 41px),
+    repeating-linear-gradient(0deg,  transparent, transparent 40px, rgba(201,168,76,0.04) 40px, rgba(201,168,76,0.04) 41px);
+  pointer-events: none;
+}
+.official-inner   { max-width: 600px; margin: 0 auto; position: relative; }
+.official-label   { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+.official-name    { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; color: var(--white); margin-bottom: 0.3rem; }
+.official-position { font-size: 0.85rem; color: rgba(201,168,76,0.85); margin-bottom: 1.5rem; }
+.official-divider { width: 60px; height: 2px; background: var(--gold); margin: 1.25rem auto; opacity: 0.6; }
+.official-quote {
+  font-family: var(--font-serif); font-size: 1rem; font-style: italic;
+  color: rgba(255,255,255,0.85); line-height: 1.75;
+  max-width: 520px; margin: 0 auto;
+}
+.official-quote::before { content: '\201C'; color: var(--gold); font-size: 1.4rem; line-height: 0; vertical-align: -0.3em; margin-right: 2px; }
+.official-quote::after  { content: '\201D'; color: var(--gold); font-size: 1.4rem; line-height: 0; vertical-align: -0.3em; margin-left: 2px; }
+
+/* DTI card */
+.dti-section { margin-bottom: 3rem; }
+.dti-card {
+  background: #fff; border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
+  border-radius: 0 12px 12px 0; padding: 1.5rem 1.75rem;
+  box-shadow: 0 4px 20px rgba(0,33,71,0.05);
+}
+.dti-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.dti-badge  { background: var(--navy-mid); color: #fff; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; flex-shrink: 0; }
+.dti-header h3 { font-family: var(--font-serif); font-size: 1rem; color: var(--navy-mid); }
+.dti-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.dti-field { display: flex; flex-direction: column; gap: 0.2rem; }
+.dti-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.dti-value { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+.dti-value.mono { font-family: var(--font-mono); font-size: 0.78rem; color: var(--navy-mid); }
+.dti-value.gold { color: #8a6a14; }
+
+
+/* ── 21. PUBLIC PORTAL — FOOTER NAV ──────────────────────────── */
+.footer-nav {
+  display: flex; justify-content: center;
+  gap: 0.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+.footer-nav a {
+  font-size: 0.83rem; color: var(--muted);
+  text-decoration: none; padding: 0.4rem 1rem;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.footer-nav a:hover  { background: rgba(0,33,71,0.06); color: var(--navy-mid); }
+.footer-nav a.active { color: var(--navy-mid); font-weight: 600; background: rgba(0,33,71,0.06); }
+
+
+/* ── 22. SITE FOOTER ──────────────────────────────────────────── */
 .site-footer {
-    text-align: center;
-    padding: 1.5rem;
-    font-size: 0.75rem;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    margin-top: 2rem;
+  text-align: center;
+  padding: 1.5rem; font-size: 0.75rem;
+  color: var(--muted);
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+.site-footer strong { color: var(--navy-mid); }
+
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ledger-stats { grid-template-columns: 1fr 1fr; }
+  .ledger-stats .stat-card:last-child { grid-column: span 2; }
+  .search-input { width: 100%; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+  .search-wrap { width: 100%; }
+  col.col-type, col.col-hash { display: none; }
+  td:nth-child(3), td:nth-child(4),
+  th:nth-child(3), th:nth-child(4) { display: none; }
+}
+
+@media (max-width: 520px) {
+  .data-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .official-name { font-size: 1.3rem; }
 }
