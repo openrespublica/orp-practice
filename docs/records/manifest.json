@@ -4,6 +4,23 @@
     "signer": "HON. SHANDY NAZARENO",
     "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
     "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
+    "document_type": "MEMO_ORDER_STAND",
+    "control_number": "Verified_2026-0014-MEMO_ORDER_STAND",
+    "sha256_hash": "f4e844aed0f5e710ca6941471c8c2b7c770a0299839524b598e0473a861f40b1",
+    "timestamp": "2026-06-05 04:05 PM PHT",
+    "immudb_transaction_id": 14,
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=f4e844aed0f5e710ca6941471c8c2b7c770a0299839524b598e0473a861f40b1",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"control_number\": \"Verified_2026-0014-MEMO_ORDER_STAND\", \"document_type\": \"MEMO_ORDER_STAND\", \"immudb_transaction_id\": 14, \"operator_identity\": \"CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH\", \"position\": \"SK CHAIRPERSON, Barangay Motong, Dumaguete City\", \"sha256_hash\": \"f4e844aed0f5e710ca6941471c8c2b7c770a0299839524b598e0473a861f40b1\", \"signer\": \"HON. SHANDY NAZARENO\", \"status\": \"VERIFIED\", \"timestamp\": \"2026-06-05 04:05 PM PHT\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=f4e844aed0f5e710ca6941471c8c2b7c770a0299839524b598e0473a861f40b1\"}\n-----BEGIN PGP SIGNATURE-----\n\niJMEARYKADsWIQTFMVLuN1DRtoxVojyrlmBgVKOAFQUCaiKDNh0cbWFyY29mZXJu\nYW5kZXowMjA0QGdtYWlsLmNvbQAKCRCrlmBgVKOAFWmDAQCqCwyucBSmuJZU/7W3\nABjMfAyq1tJT524qhLdRMYvIHQEA0PsFUjlrADi+1vrQ9uDH9Zy76EbXz3Swb9wX\n1Svw3Qo=\n=ugdN\n-----END PGP SIGNATURE-----\n",
+      "hash_anchor": "7b30b97b57b946017c19aaa6a0ead94ecfdb8a4a327d9b8f06e6ad4a1009f576",
+      "integrity_scope": "EPHEMERAL_RAM_LEGAL_SIGNATURE"
+    }
+  },
+  {
+    "status": "VERIFIED",
+    "signer": "HON. SHANDY NAZARENO",
+    "position": "SK CHAIRPERSON, Barangay Motong, Dumaguete City",
+    "operator_identity": "CN=shandy-01,O=ORP Operators,ST=Negros Oriental,C=PH",
     "document_type": "BARANGAY_CERTIFI",
     "control_number": "Verified_2026-0013-BARANGAY_CERTIFI",
     "sha256_hash": "9ea1be0066ef51cf117a41db46db7fe07d3781830be84a98d08245d55e5ed104",

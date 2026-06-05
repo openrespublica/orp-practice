@@ -135,6 +135,80 @@ echo "[*] Phase 7: Initiating CUPS Core Daemon and setting boot runtime targets.
 rc-update add cupsd default
 rc-service cupsd restart
 
+echo "[*] Phase 7.5: Initiating Zero-Trust Host Hardening Protocol..."
+
+# ==============================================================================
+# LAYER 1: Binary Execution Sandbox
+# Strip world-execution rights from all CUPS client binaries.
+# Only users explicitly assigned to the lpadmin group (marco) can invoke them.
+# ==============================================================================
+echo "  -> Locking down CUPS executable binaries..."
+for binary in lp lpr lpstat cancel cupsdisable cupsenable lpadmin lpinfo lpmove lpoptions; do
+    if [ -f "/usr/bin/$binary" ]; then
+        chown root:lpadmin "/usr/bin/$binary"
+        chmod 750 "/usr/bin/$binary"
+    fi
+    if [ -f "/usr/sbin/$binary" ]; then
+        chown root:lpadmin "/usr/sbin/$binary"
+        chmod 750 "/usr/sbin/$binary"
+    fi
+done
+
+# ==============================================================================
+# LAYER 2: CUPS Policy Enforcement
+# Force the internal IPP scheduler to drop jobs from any user except 'marco'.
+# ==============================================================================
+echo "  -> Rewriting internal IPP access policies..."
+cat << 'EOF' > /etc/cups/cupsd.conf
+# Strict Local Loopback Only
+Listen 127.0.0.1:631
+Listen [::1]:631
+
+# Disable network browsing/discovery entirely
+Browsing Off
+
+# Default policy: Absolute restriction to the designated operator
+<Policy default>
+  # Job Submission and Management operations
+  <Limit Send-Document Send-URI Hold-Job Release-Job Restart-Job Purge-Jobs Set-Job-Attributes Create-Job-Subscription Renew-Subscription Cancel-Subscription Get-Notifications Reprocess-Job Cancel-Current-Job Suspend-Current-Job Resume-Job Cancel-My-Jobs Close-Job CUPS-Move-Job CUPS-Get-Document>
+    Require user marco
+    Order deny,allow
+  </Limit>
+
+  # Administrative operations
+  <Limit CUPS-Add-Modify-Printer CUPS-Delete-Printer CUPS-Add-Modify-Class CUPS-Delete-Class CUPS-Set-Default CUPS-Get-Devices>
+    AuthType Default
+    Require user @SYSTEM
+    Order deny,allow
+  </Limit>
+
+  # General read-only queries
+  <Limit All>
+    Order deny,allow
+  </Limit>
+</Policy>
+EOF
+
+rc-service cupsd restart
+
+# ==============================================================================
+# LAYER 3: Backend Logic Kill-Switch
+# Inject an immediate validation check into the TruthChain pipeline.
+# ==============================================================================
+echo "  -> Injecting execution kill-switch into the TruthChain backend..."
+
+# We use sed to insert the kill-switch right after the variables are defined
+sed -i '/INPUT_FILE="$6"/a \
+\
+# ── DEFENSE IN DEPTH: Hardcoded Execution Kill-Switch ──\
+if [ "$USER_NAME" != "marco" ]; then\
+    logger -t "TRUTHCHAIN-PRINTER" "CRITICAL: Unauthorized execution attempt by user: $USER_NAME. Payload destroyed."\
+    exit 1\
+fi\
+' /usr/lib/cups/backend/truthchain
+
+echo "[+] Hardening Protocol Complete. Print subsystem is now isolated."
+
 echo "[*] Phase 8: Registering the TruthChain Endpoint into the CUPS Spooler Matrix..."
 # Check if the printer destination already exists to prevent duplicate configuration conflicts
 if lpstat -p "TruthChain_Standard_Printer" >/dev/null 2>&1; then
