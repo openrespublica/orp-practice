@@ -4,6 +4,26 @@
     "signer": "MARCO C. FERNANDEZ",
     "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
     "operator_identity": "PORTAL",
+    "document_type": "RESUME",
+    "control_number": "Verified_2026-0002-RESUME",
+    "sequence": 2,
+    "sha256_hash": "264c5e2fafc02d5f06066c78d1c5bbc82510be2d6246a885fc1dfdc6e1caf1bf",
+    "chain_hash": "6da034fe4f0fde13e8121ac3aed865b8dd108a3d6fc6f2e10bb15be9b68dc26f",
+    "timestamp": "2026-08-28 05:46 PM PHT",
+    "timestamp_iso": "2026-08-28T17:46:47.008184+08:00",
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=264c5e2fafc02d5f06066c78d1c5bbc82510be2d6246a885fc1dfdc6e1caf1bf",
+    "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"6da034fe4f0fde13e8121ac3aed865b8dd108a3d6fc6f2e10bb15be9b68dc26f\", \"control_number\": \"Verified_2026-0002-RESUME\", \"document_type\": \"RESUME\", \"operator_identity\": \"PORTAL\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"sequence\": 2, \"sha256_hash\": \"264c5e2fafc02d5f06066c78d1c5bbc82510be2d6246a885fc1dfdc6e1caf1bf\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"VERIFIED \\u2705\", \"timestamp\": \"2026-08-28 05:46 PM PHT\", \"timestamp_iso\": \"2026-08-28T17:46:47.008184+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=264c5e2fafc02d5f06066c78d1c5bbc82510be2d6246a885fc1dfdc6e1caf1bf\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCapFZBwAKCRC6ZaT8GJvZ\nJllrAP40LVx3jjNVlAz1DJSYLqsA+zuRttdW6MDXT+kgZ7yViwEA2b5vLjdKdGui\naMG3EHzCfqbY/vyqzim6UDnDaBuIxwY=\n=MrZe\n-----END PGP SIGNATURE-----\n",
+      "record_hash": "22ef59c1714f56271bc6d7baab7e331316fd000deffe6b7417b81b07fed3b48d",
+      "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+    }
+  },
+  {
+    "status": "VERIFIED \u2705",
+    "signer": "MARCO C. FERNANDEZ",
+    "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+    "operator_identity": "PORTAL",
     "document_type": "",
     "control_number": "Verified_2026-0001-",
     "sequence": 1,
