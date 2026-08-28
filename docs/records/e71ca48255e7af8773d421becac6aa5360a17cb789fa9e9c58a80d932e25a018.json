@@ -1,0 +1,20 @@
+{
+  "status": "VERIFIED \u2705",
+  "signer": "MARCO C. FERNANDEZ",
+  "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+  "operator_identity": "PORTAL",
+  "document_type": "",
+  "control_number": "Verified_2026-0001-",
+  "sequence": 1,
+  "sha256_hash": "e71ca48255e7af8773d421becac6aa5360a17cb789fa9e9c58a80d932e25a018",
+  "chain_hash": "9443b40af61a66c608eb629378c48ff8a8e8b469d437e03343e45a842aa83496",
+  "timestamp": "2026-08-28 12:59 PM PHT",
+  "timestamp_iso": "2026-08-28T12:59:41.905105+08:00",
+  "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=e71ca48255e7af8773d421becac6aa5360a17cb789fa9e9c58a80d932e25a018",
+  "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+  "data_signature": {
+    "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"9443b40af61a66c608eb629378c48ff8a8e8b469d437e03343e45a842aa83496\", \"control_number\": \"Verified_2026-0001-\", \"document_type\": \"\", \"operator_identity\": \"PORTAL\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"sequence\": 1, \"sha256_hash\": \"e71ca48255e7af8773d421becac6aa5360a17cb789fa9e9c58a80d932e25a018\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"VERIFIED \\u2705\", \"timestamp\": \"2026-08-28 12:59 PM PHT\", \"timestamp_iso\": \"2026-08-28T12:59:41.905105+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=e71ca48255e7af8773d421becac6aa5360a17cb789fa9e9c58a80d932e25a018\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCapEVvgAKCRC6ZaT8GJvZ\nJo0UAQDAbw34I17K38ldZH496p5TAzMi3ecDgIP4kgjXQ+/t8wD9EYTy9LtzGcj3\nm98PmhCppOVIay2prAaKzIa0CyqacAE=\n=LWao\n-----END PGP SIGNATURE-----\n",
+    "record_hash": "53166bcf623b9aa6e78f50a66ead5a51cbcdeb1f5d9b8e215d43bcb6feecc9d5",
+    "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+  }
+}
