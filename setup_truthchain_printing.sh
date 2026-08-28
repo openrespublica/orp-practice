@@ -2,10 +2,10 @@
 # ==============================================================================
 # TRUTHCHAIN SECURE PRINT SERVICE SUBSYSTEM INITIALIZATION BLUEPRINT
 # Target Environment: Alpine Linux Standard (Main Core Node)
+# Target User: M-and-M
 # Implementation: Custom Isolated CUPS Backend Mapping to mTLS Gateway
 # ==============================================================================
 
-# Ensure the script is running with administrative privileges
 if [ "$(id -u)" -ne 0 ]; then
     echo "[!] Critical Error: This setup script must be run with root authority." >&2
     echo "    Execute via: doas bash $0" >&2
@@ -32,10 +32,10 @@ mkdir -p /usr/lib/cups/backend/
 mkdir -p /var/log/cups/
 
 echo "[*] Phase 3: Provisioning cryptographic access security groups..."
-# Ensure targeted security boundaries exist
 getent group lpadmin >/dev/null || addgroup lpadmin
 getent group sys >/dev/null     || addgroup sys
 
+<<<<<<< HEAD
 # Add the detected operator user to lpadmin and sys groups
 if id "$OPERATOR_USER" >/dev/null 2>&1; then
     addgroup "$OPERATOR_USER" lpadmin 2>/dev/null || true
@@ -47,20 +47,17 @@ else
 fi
 
 addgroup root lpadmin 2>/dev/null || true
+=======
+addgroup M-and-M lpadmin
+addgroup M-and-M sys
+addgroup root lpadmin
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 
 echo "[*] Phase 4: Constructing hardened cups-files.conf layout..."
 cat << 'EOF' > /etc/cups/cups-files.conf
-# ==============================================================================
-# Hardened File/Directory Access Protection Mapping for TruthChain CUPS Engine
-# ==============================================================================
-
-# System administrative groups allowed to alter print execution states
 SystemGroup lpadmin sys root
-
-# Enforce Unix domain socket peer credential verification for local processes
 PeerCred on
 
-# Centralized Immutable Log Locations for Blue Team Audit Tracking
 AccessLog /var/log/cups/access_log
 ErrorLog /var/log/cups/error_log
 PageLog /var/log/cups/page_log
@@ -73,21 +70,19 @@ EOF
 echo "[*] Phase 5: Generating Custom Cryptographic Pipeline Backend..."
 cat << EOF > /usr/lib/cups/backend/truthchain
 #!/usr/bin/env bash
-# ==============================================================================
-# /usr/lib/cups/backend/truthchain
-# Custom CUPS Transmission Layer for the TruthChain Decentralized Proxy
-# ==============================================================================
-
-# CRITICAL FIX: CUPS isolates backends and clears the global environment.
-# We must explicitly declare the system execution PATH.
 PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
 
+<<<<<<< HEAD
 # Device Discovery Directive: If executed with zero parameters, announce capabilities
 if [ -z "\$1" ]; then
+=======
+if [ -z "$1" ]; then
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
     echo 'direct truthchain "Unknown" "TruthChain Secure Cryptographic Printer Endpoint"'
     exit 0
 fi
 
+<<<<<<< HEAD
 # Capture the 6 standard positional parameters passed natively by the CUPS daemon
 JOB_ID="\$1"
 USER_NAME="\$2"
@@ -139,6 +134,51 @@ if [ "\$HTTP_STATUS" -eq 200 ]; then
     cp "\$RESPONSE_PDF" "\$STAMPED_FILE"
     chown "$OPERATOR_USER:$OPERATOR_USER" "\$STAMPED_FILE" 2>/dev/null || true
     chmod 600 "\$STAMPED_FILE"
+=======
+JOB_ID="$1"
+USER_NAME="$2"
+JOB_TITLE="$3"
+COPIES="$4"
+OPTIONS="$5"
+INPUT_FILE="$6"
+
+# ── DEFENSE IN DEPTH: Hardcoded Execution Kill-Switch ──
+if [ "$USER_NAME" != "M-and-M" ]; then
+    logger -t "TRUTHCHAIN-PRINTER" "CRITICAL: Unauthorized execution attempt by user: $USER_NAME. Payload destroyed."
+    exit 1
+fi
+
+ENGINE_URL="https://127.0.0.1:9443/print" 
+MTLS_CERT="/home/M-and-M/.orp_engine/ssl/operator_01.crt"
+MTLS_KEY="/home/M-and-M/.orp_engine/ssl/operator_01.key"
+ARCHIVE_DIR="/home/M-and-M/pdf_printed_archive"
+
+TMP_PAYLOAD=$(mktemp /tmp/orp_print.XXXXXX)
+RESPONSE_PDF=$(mktemp /tmp/orp_processed.XXXXXX)
+
+if [ -n "$INPUT_FILE" ] && [ -f "$INPUT_FILE" ]; then
+    ps2pdf "$INPUT_FILE" "$TMP_PAYLOAD"
+else
+    cat <&0 | ps2pdf - "$TMP_PAYLOAD"
+fi
+
+HTTP_STATUS=$(curl -s -w "%{http_code}" -o "$RESPONSE_PDF" \
+    --cert "$MTLS_CERT" \
+    --key "$MTLS_KEY" \
+    --insecure \
+    -H "X-Operator-ID: $USER_NAME" \
+    -H "X-Print-Job-Title: $JOB_TITLE" \
+    --data-binary "@$TMP_PAYLOAD" \
+    "$ENGINE_URL")
+
+if [ "$HTTP_STATUS" -eq 200 ]; then
+    mkdir -p "$ARCHIVE_DIR"
+    STAMPED_FILE="${ARCHIVE_DIR}/Stamped_Job_${JOB_ID}.pdf"
+    
+    cp "$RESPONSE_PDF" "$STAMPED_FILE"
+    chown M-and-M:M-and-M "$STAMPED_FILE"
+    chmod 600 "$STAMPED_FILE"
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
     
     logger -t "TRUTHCHAIN-PRINTER" "SUCCESS: Job \${JOB_ID} verified and routed via mTLS proxy."
     rm -f "\$TMP_PAYLOAD" "\$RESPONSE_PDF"
@@ -151,27 +191,35 @@ fi
 EOF
 
 echo "[*] Phase 6: Locking down file execution permissions..."
-# CUPS requires root ownership and 700 permissions to execute custom backends safely
 chown root:root /usr/lib/cups/backend/truthchain
 chmod 700 /usr/lib/cups/backend/truthchain
 
+<<<<<<< HEAD
 # Pre-stage and secure the local operator's printing archive
 mkdir -p "$OPERATOR_HOME/pdf_printed_archive"
 chown -R "$OPERATOR_USER:$OPERATOR_USER" "$OPERATOR_HOME/pdf_printed_archive"
 chmod 700 "$OPERATOR_HOME/pdf_printed_archive"
 echo "[✔] Archive directory created: $OPERATOR_HOME/pdf_printed_archive"
+=======
+mkdir -p /home/M-and-M/pdf_printed_archive
+chown -R M-and-M:M-and-M /home/M-and-M/pdf_printed_archive
+chmod 700 /home/M-and-M/pdf_printed_archive
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 
-echo "[*] Phase 7: Initiating CUPS Core Daemon and setting boot runtime targets..."
+echo "[*] Phase 7: Initiating CUPS Core Daemon..."
 rc-update add cupsd default
 rc-service cupsd restart
 
 echo "[*] Phase 7.5: Initiating Zero-Trust Host Hardening Protocol..."
 
+<<<<<<< HEAD
 # ==============================================================================
 # LAYER 1: Binary Execution Sandbox
 # Strip world-execution rights from all CUPS client binaries.
 # Only users explicitly assigned to the lpadmin group can invoke them.
 # ==============================================================================
+=======
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 echo "  -> Locking down CUPS executable binaries..."
 for binary in lp lpr lpstat cancel cupsdisable cupsenable lpadmin lpinfo lpmove lpoptions; do
     if [ -f "/usr/bin/$binary" ]; then
@@ -184,24 +232,28 @@ for binary in lp lpr lpstat cancel cupsdisable cupsenable lpadmin lpinfo lpmove 
     fi
 done
 
+<<<<<<< HEAD
 # ==============================================================================
 # LAYER 2: CUPS Policy Enforcement
 # Force the internal IPP scheduler to accept jobs from lpadmin group members only.
 # ==============================================================================
+=======
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 echo "  -> Rewriting internal IPP access policies..."
 cat << 'EOF' > /etc/cups/cupsd.conf
-# Strict Local Loopback Only
 Listen 127.0.0.1:631
 Listen [::1]:631
 Listen /run/cups/cups.sock
 
-# Disable network browsing/discovery entirely
 Browsing Off
 
+<<<<<<< HEAD
 # Default policy: Absolute restriction to lpadmin group
+=======
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 <Policy default>
-  # Job Submission and Management operations
   <Limit Send-Document Send-URI Hold-Job Release-Job Restart-Job Purge-Jobs Set-Job-Attributes Create-Job-Subscription Renew-Subscription Cancel-Subscription Get-Notifications Reprocess-Job Cancel-Current-Job Suspend-Current-Job Resume-Job Cancel-My-Jobs Close-Job CUPS-Move-Job CUPS-Get-Document>
+<<<<<<< HEAD
     Require user @OWNER @SYSTEM
     Order allow,deny
   </Limit>
@@ -211,9 +263,18 @@ Browsing Off
     AuthType Default
     Require user @SYSTEM
     Order allow,deny
+=======
+    Require user M-and-M
+    Order deny,allow
   </Limit>
 
-  # General read-only queries
+  <Limit CUPS-Add-Modify-Printer CUPS-Delete-Printer CUPS-Add-Modify-Class CUPS-Delete-Class CUPS-Set-Default CUPS-Get-Devices>
+    AuthType None
+    Require user M-and-M @SYSTEM
+    Order deny,allow
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
+  </Limit>
+
   <Limit All>
     Order allow,deny
   </Limit>
@@ -225,14 +286,18 @@ mkdir -p /run/cups
 chmod 755 /run/cups
 
 rc-service cupsd restart
+<<<<<<< HEAD
 
 echo "  -> Print subsystem hardening complete (kill-switch embedded)."
+=======
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
 echo "[+] Hardening Protocol Complete. Print subsystem is now isolated."
 
 # ==============================================================================
 # Phase 8: Register the TruthChain Endpoint
 # ==============================================================================
 echo "[*] Phase 8: Registering the TruthChain Endpoint into the CUPS Spooler Matrix..."
+<<<<<<< HEAD
 
 # Wait for CUPS daemon to be fully ready
 sleep 2
@@ -304,6 +369,23 @@ if [ -n "$PRINTER_CHECK" ]; then
     echo "[✔] SUCCESS: Spooler mapping verified."
     echo "$PRINTER_CHECK"
     echo ""
+=======
+if lpstat -p "TruthChain_Standard_Printer" >/dev/null 2>&1; then
+    echo "[*] Destination already registered. Updating configuration..."
+fi
+
+lpadmin -p "TruthChain_Standard_Printer" \
+        -E \
+        -v "truthchain://127.0.0.1/print" \
+        -m raw \
+        -u allow:M-and-M \
+        -L "Sovereign Verification Desk" \
+        -o printer-is-shared=false
+
+echo "[*] Phase 9: Auditing active spooler state configuration..."
+if lpstat -p "TruthChain_Standard_Printer" -v | grep -q "truthchain://"; then
+    echo "[+] SUCCESS: Spooler mapping verified live."
+>>>>>>> a3a951b (chore: commit local changes to unblock sync)
     echo "------------------------------------------------------------"
     lpq -P TruthChain_Standard_Printer 2>/dev/null || echo "Queue ready (no jobs)"
     echo "------------------------------------------------------------"
