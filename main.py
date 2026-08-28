@@ -241,27 +241,79 @@ def stamp_pdf(pdf_bytes: bytes, sha256: str, qr_buf: io.BytesIO,
     writer = PdfWriter()
     qr_img = ImageReader(qr_buf)
 
+    # Footer layout constants
+    FOOTER_H   = 26 * mm   # total footer height from bottom
+    LINE_Y     = FOOTER_H  # separator line Y position
+    QR_SIZE    = 20 * mm
+    QR_X       = 168 * mm
+    QR_Y       = 4 * mm
+    LEFT_X     = 12 * mm
+    VAL_X      = 38 * mm
+    ROW_H      = 4.2 * mm
+    FONT_LABEL = 6.0
+    FONT_VAL   = 6.0
+    FONT_SIGN  = 5.5
+    # Right column for HASH and CHAIN
+    LEFT2_X    = 100 * mm
+    VAL2_X     = 118 * mm
+
+    # Truncate ctrl number for display (remove "Verified_" prefix)
+    ctrl_short = ctrl.replace("Verified_", "")
+
     for page in reader.pages:
         pkt = io.BytesIO()
         c   = canvas.Canvas(pkt, pagesize=A4)
-        c.setLineWidth(0.5)
-        c.line(25*mm, 24*mm, 185*mm, 24*mm)
-        y = 20*mm
+
+        # Separator line
+        c.setLineWidth(0.4)
+        c.setStrokeColorRGB(0.4, 0.4, 0.4)
+        c.line(10*mm, LINE_Y, 198*mm, LINE_Y)
+
+        # ── Left column: TIMESTAMP, CTRL NO, SEQ ─────────────────
+        y = LINE_Y - ROW_H
+
         for label, val in [
-            ("TIMESTAMP",  timestamp),
-            ("CTRL NO",    ctrl),
-            ("SEQ",        f"#{seq}"),
-            ("HASH",       sha256[:32] + "..."),
-            ("CHAIN",      chain_hash[:24] + "..."),
+            ("TIMESTAMP", timestamp),
+            ("CTRL NO",   ctrl_short),
+            ("SEQ",       f"#{seq}"),
         ]:
-            c.setFont("Helvetica-Bold", 6.5)
-            c.drawString(27*mm, y, f"{label}:")
-            c.setFont("Helvetica", 6.5)
-            c.drawString(52*mm, y, str(val))
-            y -= 3.2*mm
-        c.drawImage(qr_img, 165*mm, 5*mm, width=18*mm, height=18*mm)
-        c.setFont("Helvetica-Bold", 6)
-        c.drawString(27*mm, 6*mm, f"{SIGNER_NAME} — {LGU_NAME}")
+            c.setFont("Helvetica-Bold", FONT_LABEL)
+            c.drawString(LEFT_X, y, f"{label}:")
+            c.setFont("Helvetica", FONT_VAL)
+            c.drawString(VAL_X, y, str(val))
+            y -= ROW_H
+
+        # Signer name below left column
+        c.setFont("Helvetica-Bold", FONT_SIGN)
+        c.setFillColorRGB(0.2, 0.2, 0.2)
+        signer_line = f"{SIGNER_NAME}"
+        c.drawString(LEFT_X, y, signer_line)
+        c.setFont("Helvetica", FONT_SIGN)
+        c.drawString(LEFT_X, y - 3.5*mm, LGU_NAME)
+
+        # ── Right column: HASH, CHAIN ─────────────────────────────
+        y2 = LINE_Y - ROW_H
+
+        for label, val in [
+            ("HASH",  sha256[:40] + "..."),
+            ("CHAIN", chain_hash[:40] + "..."),
+        ]:
+            c.setFont("Helvetica-Bold", FONT_LABEL)
+            c.drawString(LEFT2_X, y2, f"{label}:")
+            c.setFont("Helvetica", FONT_VAL)
+            # Break into two lines if too long
+            c.drawString(VAL2_X, y2, str(val[:28]))
+            if len(str(val)) > 28:
+                c.drawString(VAL2_X, y2 - 3*mm, str(val)[28:])
+                y2 -= 3*mm
+            y2 -= ROW_H
+
+        # ── QR code ───────────────────────────────────────────────
+        c.drawImage(qr_img, QR_X, QR_Y, width=QR_SIZE, height=QR_SIZE)
+
+        # Reset color
+        c.setFillColorRGB(0, 0, 0)
+
         c.save()
         pkt.seek(0)
         page.merge_page(PdfReader(pkt).pages[0])
