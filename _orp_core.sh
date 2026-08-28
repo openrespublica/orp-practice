@@ -129,8 +129,20 @@ orp_unlock_vault() {
     printf '[✔] USB boot partition: %s\n' "$boot_dev"
 
     # ── Mount FAT32 read-only ─────────────────────────────────────
-    boot_mount=$(mktemp -d)
-    doas mount -o ro "$boot_dev" "$boot_mount"
+    # Check if automounter already mounted it (Alpine/udisks2)
+    local existing_mount
+    existing_mount=$(grep "$boot_dev" /proc/mounts                      | awk '{print $2}' | head -1 || true)
+
+    local boot_mount
+    local we_mounted=0
+    if [ -n "$existing_mount" ]; then
+        boot_mount="$existing_mount"
+        printf '[✔] Using existing mount: %s\n' "$boot_mount"
+    else
+        boot_mount=$(mktemp -d)
+        doas mount -o ro "$boot_dev" "$boot_mount"
+        we_mounted=1
+    fi
 
     # ── Verify USB identity ───────────────────────────────────────
     if [ ! -f "$boot_mount/$ORP_VAULT_IDENTITY" ]; then
@@ -165,10 +177,25 @@ orp_unlock_vault() {
         orp_die "LUKS vault partition not found (UUID: $ORP_USB_LUKS_UUID)."
     fi
 
-    # ── Close stale mapping ───────────────────────────────────────
+    # ── Close ALL existing mappings of this LUKS UUID ────────────
+    # The system automapper may open sdb2 under a different name
+    # e.g. luks-41d9e898-... instead of orp_vault.
+    # We must close every mapping before cryptsetup open will work.
+    for dm in /dev/mapper/*; do
+        local dm_name
+        dm_name=$(basename "$dm")
+        [ "$dm_name" = "control" ] && continue
+        # Check if this dm device is backed by our LUKS partition
+        if doas cryptsetup status "$dm_name" 2>/dev/null                 | grep -q "$luks_dev"; then
+            printf "[!] Closing existing mapping: %s\n" "$dm_name"
+            doas cryptsetup close "$dm_name" 2>/dev/null ||             doas dmsetup remove --force "$dm_name" 2>/dev/null || true
+            sleep 1
+        fi
+    done
+    # Also close by our canonical name just in case
     if [ -e "/dev/mapper/$ORP_VAULT_MAP" ]; then
-        printf '[!] Stale vault mapping — closing...\n'
         doas cryptsetup close "$ORP_VAULT_MAP" 2>/dev/null || true
+        sleep 1
     fi
 
     # ── Unlock LUKS: keyfile (factor 1) + passphrase (factor 2) ──
@@ -183,8 +210,11 @@ orp_unlock_vault() {
         orp_die "LUKS unlock failed — wrong passphrase or corrupted vault."
     fi
 
-    doas umount "$boot_mount"
-    rmdir "$boot_mount"
+    # Only unmount if we mounted it ourselves
+    if [ "${we_mounted:-0}" = "1" ]; then
+        doas umount "$boot_mount"
+        rmdir "$boot_mount" 2>/dev/null || true
+    fi
 
     # ── Mount decrypted filesystem ────────────────────────────────
     doas mkdir -p "$ORP_VAULT_MOUNT"
@@ -358,6 +388,9 @@ orp_configure_git() {
     printf '[✔] Git configured for session.\n'
 }
 
+    # Ensure /run/nginx directory exists
+    doas mkdir -p /run/nginx
+    doas chown nginx:nginx /run/nginx 2>/dev/null || true
 # ─────────────────────────────────────────────────────────────────
 # 8. Nginx gateway (Alpine — uses doas, no systemctl)
 # ─────────────────────────────────────────────────────────────────
@@ -371,6 +404,10 @@ orp_refresh_gateway() {
         doas nginx -t >&2
         orp_die "Nginx config invalid."
     fi
+
+    # Ensure /run/nginx directory exists
+    doas mkdir -p /run/nginx
+    doas chown nginx:nginx /run/nginx 2>/dev/null || true
 
     if pgrep nginx > /dev/null 2>&1; then
         doas nginx -s reload

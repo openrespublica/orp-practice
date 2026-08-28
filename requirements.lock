@@ -44,7 +44,7 @@ packaging==26.2
 pillow==12.2.0
 pip-api==0.0.34
 pip-requirements-parser==32.0.1
-pip-tools==7.5.3
+pip-tools==7.6.1
 pip_audit==2.10.0
 platformdirs==4.10.0
 pluggy==1.6.0
@@ -71,7 +71,7 @@ reportlab==4.4.10
 requests==2.34.2
 rich==15.0.0
 rsa==4.9.1
-setuptools==82.0.1
+setuptools==84.0.0
 six==1.17.0
 sortedcontainers==2.4.0
 tomli==2.4.1
