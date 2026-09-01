@@ -1,0 +1,21 @@
+{
+  "status": "PRINTED \u2705",
+  "signer": "MARCO C. FERNANDEZ",
+  "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+  "operator_identity": "M-and-M",
+  "document_type": "CUPS-PIPELINE-TEST",
+  "print_source": "cups",
+  "control_number": "Verified_2026-0004-CUPS-PIPELINE-TEST",
+  "sequence": 4,
+  "sha256_hash": "42ed216873a58fce4104ea70bf77be835e72ac875b3742a876773746ca5d5ccd",
+  "chain_hash": "a5c43b5f788f443c4691b5c4daec355aa41ad78e421b8ac6dac01d4886c31030",
+  "timestamp": "2026-09-01 06:58 PM PHT",
+  "timestamp_iso": "2026-09-01T18:58:30.489843+08:00",
+  "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=42ed216873a58fce4104ea70bf77be835e72ac875b3742a876773746ca5d5ccd",
+  "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+  "data_signature": {
+    "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"a5c43b5f788f443c4691b5c4daec355aa41ad78e421b8ac6dac01d4886c31030\", \"control_number\": \"Verified_2026-0004-CUPS-PIPELINE-TEST\", \"document_type\": \"CUPS-PIPELINE-TEST\", \"operator_identity\": \"M-and-M\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"print_source\": \"cups\", \"sequence\": 4, \"sha256_hash\": \"42ed216873a58fce4104ea70bf77be835e72ac875b3742a876773746ca5d5ccd\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"PRINTED \\u2705\", \"timestamp\": \"2026-09-01 06:58 PM PHT\", \"timestamp_iso\": \"2026-09-01T18:58:30.489843+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=42ed216873a58fce4104ea70bf77be835e72ac875b3742a876773746ca5d5ccd\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCapav1gAKCRC6ZaT8GJvZ\nJqUHAQCfXjWhiIQlFlICWEPawCGM09b1uI7rb/8623zdUT0XLgEA9ruRu1gfB8SV\n+nMA4vAf+vGzb7reOr5DQwNYpexZUAg=\n=NIvx\n-----END PGP SIGNATURE-----\n",
+    "record_hash": "4a538962f83dbe06bbbdd4ede620d4d84597a583eafc774b185a9edf9ab9412f",
+    "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+  }
+}

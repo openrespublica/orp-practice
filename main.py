@@ -397,9 +397,11 @@ def sync_to_github(json_path: str, record: dict) -> None:
             update_manifest(record)
 
             # Copy record JSON to docs/records/ for GitHub Pages
+            # Always use <sha256>.json as filename — verify.js requires this
+            sha256_from_record = record.get("sha256_hash", "")
             docs_rec = os.path.join(
                 REPO_PATH, "docs", "records",
-                os.path.basename(json_path)
+                f"{sha256_from_record}.json"
             )
             shutil.copy2(json_path, docs_rec)
 
@@ -684,8 +686,9 @@ def print_pdf():
             record["data_signature"] = sig
 
         # Write immutable record to vault
+        # Filename must be exactly <sha256>.json — verify.js depends on this
         rec_dir   = dated_subdir(RECORDS_DIR)
-        json_path = os.path.join(rec_dir, f"{sha256}-print-{seq}.json")
+        json_path = os.path.join(rec_dir, f"{sha256}.json")
         with open(json_path, "w") as f:
             json.dump(record, f, indent=2)
         os.chmod(json_path, 0o400)
