@@ -1,0 +1,21 @@
+{
+  "status": "PRINTED \u2705",
+  "signer": "MARCO C. FERNANDEZ",
+  "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+  "operator_identity": "M-and-M",
+  "document_type": "CANVASS-BASKETBALL-J",
+  "print_source": "cups",
+  "control_number": "Verified_2026-0007-CANVASS-BASKETBALL-J",
+  "sequence": 7,
+  "sha256_hash": "e6272255852ef94d703f0c822bf7cb3d0f21b5560cdb1247580a4f83f6d85ab5",
+  "chain_hash": "155251e3f8493606567cea699f8437b0b7757dbf982f90ceeaeedabc87cb851f",
+  "timestamp": "2026-09-01 07:17 PM PHT",
+  "timestamp_iso": "2026-09-01T19:17:53.433180+08:00",
+  "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=e6272255852ef94d703f0c822bf7cb3d0f21b5560cdb1247580a4f83f6d85ab5",
+  "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+  "data_signature": {
+    "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"155251e3f8493606567cea699f8437b0b7757dbf982f90ceeaeedabc87cb851f\", \"control_number\": \"Verified_2026-0007-CANVASS-BASKETBALL-J\", \"document_type\": \"CANVASS-BASKETBALL-J\", \"operator_identity\": \"M-and-M\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"print_source\": \"cups\", \"sequence\": 7, \"sha256_hash\": \"e6272255852ef94d703f0c822bf7cb3d0f21b5560cdb1247580a4f83f6d85ab5\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"PRINTED \\u2705\", \"timestamp\": \"2026-09-01 07:17 PM PHT\", \"timestamp_iso\": \"2026-09-01T19:17:53.433180+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=e6272255852ef94d703f0c822bf7cb3d0f21b5560cdb1247580a4f83f6d85ab5\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCapa0YQAKCRC6ZaT8GJvZ\nJttlAP47bwRv99n1eXYV2og6g0apyk/kZKNmK+5Br3+9J4RWiAEAjfhPTAwTGw6i\nJOW6siDoiyl99SYp5Idf1WdhP+swmg4=\n=zjbv\n-----END PGP SIGNATURE-----\n",
+    "record_hash": "fc1ffd8f80edddd3d2a661031af636c7c41f984bddd3b049c907b293fb137372",
+    "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+  }
+}
