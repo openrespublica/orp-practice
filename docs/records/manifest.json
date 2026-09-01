@@ -3,6 +3,27 @@
     "status": "PRINTED \u2705",
     "signer": "MARCO C. FERNANDEZ",
     "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+    "operator_identity": "M-and-M",
+    "document_type": "NATIONAL-ID-GOOGLE-D",
+    "print_source": "cups",
+    "control_number": "Verified_2026-0006-NATIONAL-ID-GOOGLE-D",
+    "sequence": 6,
+    "sha256_hash": "d0b2f77b9faad1e47c6ecbea09766fd9936d77685c13ffda24706abca1d63fb5",
+    "chain_hash": "8c6ee4341e56d487f64fe75ff17a4d3000af3922400706ce6d18b3e420f91966",
+    "timestamp": "2026-09-01 07:12 PM PHT",
+    "timestamp_iso": "2026-09-01T19:12:36.969371+08:00",
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=d0b2f77b9faad1e47c6ecbea09766fd9936d77685c13ffda24706abca1d63fb5",
+    "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"8c6ee4341e56d487f64fe75ff17a4d3000af3922400706ce6d18b3e420f91966\", \"control_number\": \"Verified_2026-0006-NATIONAL-ID-GOOGLE-D\", \"document_type\": \"NATIONAL-ID-GOOGLE-D\", \"operator_identity\": \"M-and-M\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"print_source\": \"cups\", \"sequence\": 6, \"sha256_hash\": \"d0b2f77b9faad1e47c6ecbea09766fd9936d77685c13ffda24706abca1d63fb5\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"PRINTED \\u2705\", \"timestamp\": \"2026-09-01 07:12 PM PHT\", \"timestamp_iso\": \"2026-09-01T19:12:36.969371+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=d0b2f77b9faad1e47c6ecbea09766fd9936d77685c13ffda24706abca1d63fb5\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCapazJQAKCRC6ZaT8GJvZ\nJs30AQDgI3Nh5UC8OQszNhchwpE9w4A8UTWgUxpiwjoBxpmvTAD+LcgcBbQvc4iF\nblDAax78t4jsuCJq1iHdIDO/4EUitgU=\n=HeIS\n-----END PGP SIGNATURE-----\n",
+      "record_hash": "6ec5ea56b61cd8bef7b53ee14b95deb6216bb40d8f6959d6fe6180a8b38cfe60",
+      "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+    }
+  },
+  {
+    "status": "PRINTED \u2705",
+    "signer": "MARCO C. FERNANDEZ",
+    "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
     "operator_identity": "TEST",
     "document_type": "TEST",
     "print_source": "portal",
