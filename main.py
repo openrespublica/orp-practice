@@ -415,12 +415,16 @@ def sync_to_github(json_path: str, record: dict) -> None:
                 return
             if not run_git(["git", "fetch", "origin"], "Fetch"):
                 return
+            # Stash any unstaged changes before rebase to prevent conflict
+            run_git(["git", "stash", "--include-untracked"], "Stash")
             if not run_git(
                 ["git", "pull", "--rebase", "origin", "main"], "Rebase"
             ):
                 run_git(["git", "rebase", "--abort"], "Abort rebase")
                 run_git(["git", "merge", "origin/main",
                          "-X", "ours", "--no-edit"], "Merge")
+            # Restore stashed changes after rebase
+            run_git(["git", "stash", "pop"], "Stash pop")
             run_git(["git", "push", "origin", "main"], "Push")
             logger.info(f"✅ GitHub Pages updated: {anchor[:16]}...")
         except Exception as e:
