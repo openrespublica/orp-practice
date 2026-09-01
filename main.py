@@ -579,6 +579,153 @@ def upload_pdf():
         return jsonify({"status": "ERROR", "error": str(e)}), 500
 
 
+@app.route("/print", methods=["POST"])
+def print_pdf():
+    """
+    Print endpoint — identical pipeline to /upload.
+    Called by:
+      1. Portal 'Print & Stamp' button (returns browser download)
+      2. CUPS truthchain backend (saves to archive dir, returns 200)
+    Distinguishes caller via X-Print-Source header:
+      - 'cups'   → save to archive, return minimal JSON
+      - 'portal' → return stamped PDF as download (default)
+    """
+    if not vault_ok():
+        return jsonify({
+            "status":  "ERROR",
+            "message": "Vault not mounted — re-insert Kingston USB and restart."
+        }), 503
+
+    try:
+        # Accept PDF from form upload (portal) or raw body (CUPS)
+        if request.files.get("document"):
+            file      = request.files["document"]
+            pdf_bytes = file.read()
+            doc_type  = request.form.get("doc_type", "PRINT")
+        elif request.data:
+            pdf_bytes = request.data
+            doc_type  = request.headers.get("X-Print-Job-Title", "PRINT")                             .upper().replace(" ", "-")[:20]
+        else:
+            return "No PDF data received.", 400
+
+        if not pdf_bytes:
+            return "Empty PDF.", 400
+
+        if len(pdf_bytes) > MAX_PDF:
+            return f"File exceeds {MAX_PDF // (1024*1024)}MB limit.", 413
+
+        # Determine caller
+        print_source = request.headers.get("X-Print-Source", "portal").lower()
+        operator_id  = request.headers.get("X-Operator-ID", "PORTAL-PRINT")
+
+        # Fingerprint
+        sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+        logger.info(f"Print job: {sha256[:16]}... ({len(pdf_bytes)//1024}KB) "
+                    f"via {print_source}")
+
+        # Duplicate check — still process but log warning
+        existing = find_existing_record(sha256)
+        if existing:
+            logger.warning(f"Print duplicate: {sha256[:16]}... "
+                           f"(prev: {existing.get('control_number')})")
+            # For prints, we re-stamp anyway — operator may legitimately
+            # print the same document multiple times
+            # Just log; do not block
+
+        # Timestamp + control number (shared sequence with uploads)
+        tz        = pytz.timezone(TZ_NAME)
+        now       = datetime.datetime.now(tz)
+        timestamp = now.strftime("%Y-%m-%d %I:%M %p PHT")
+        ts_iso    = now.isoformat()
+        ctrl      = next_control_number()
+        ctrl_full = f"Verified_{ctrl}-{doc_type}"
+
+        # Hash chain
+        seq        = get_next_seq()
+        chain_hash = append_chain(seq, sha256, ts_iso)
+
+        # Audit record
+        record = {
+            "status":            "PRINTED ✅",
+            "signer":            SIGNER_NAME,
+            "position":          f"{SIGNER_POS} — {LGU_NAME}",
+            "operator_identity": operator_id,
+            "document_type":     doc_type,
+            "print_source":      print_source,
+            "control_number":    ctrl_full,
+            "sequence":          seq,
+            "sha256_hash":       sha256,
+            "chain_hash":        chain_hash,
+            "timestamp":         timestamp,
+            "timestamp_iso":     ts_iso,
+            "verification_url":  f"{PORTAL_URL}?hash={sha256}",
+            "vault_storage":     "LUKS2/AES-XTS-512/Argon2id — RA10173",
+        }
+
+        sig = sign_record(record)
+        if sig:
+            record["data_signature"] = sig
+
+        # Write immutable record to vault
+        rec_dir   = dated_subdir(RECORDS_DIR)
+        json_path = os.path.join(rec_dir, f"{sha256}-print-{seq}.json")
+        with open(json_path, "w") as f:
+            json.dump(record, f, indent=2)
+        os.chmod(json_path, 0o400)
+
+        # Stamp PDF
+        qr_buf, _     = make_qr(sha256)
+        stamped_bytes = stamp_pdf(pdf_bytes, sha256, qr_buf,
+                                  timestamp, ctrl_full, chain_hash, seq)
+
+        # Archive stamped PDF to vault
+        pdf_dir  = dated_subdir(PDFS_DIR)
+        pdf_path = os.path.join(pdf_dir, f"{ctrl_full}.pdf")
+        with open(pdf_path, "wb") as f:
+            f.write(stamped_bytes)
+        os.chmod(pdf_path, 0o400)
+
+        logger.info(f"✅ Print record  : {json_path}")
+        logger.info(f"✅ Print PDF     : {pdf_path}")
+
+        # GitHub Pages sync (background)
+        threading.Thread(
+            target=sync_to_github,
+            args=(json_path, record),
+            daemon=True
+        ).start()
+
+        logger.info(f"✅ Print complete: {ctrl_full} | chain#{seq}")
+
+        # ── CUPS caller: save to archive dir, return JSON ─────────
+        if print_source == "cups":
+            archive_dir = os.path.expanduser("~/pdf_printed_archive")
+            os.makedirs(archive_dir, exist_ok=True)
+            archive_path = os.path.join(archive_dir, f"{ctrl_full}.pdf")
+            with open(archive_path, "wb") as f:
+                f.write(stamped_bytes)
+            os.chmod(archive_path, 0o600)
+            logger.info(f"✅ CUPS archive  : {archive_path}")
+            return jsonify({
+                "status":         "PRINTED",
+                "control_number": ctrl_full,
+                "sequence":       seq,
+                "archive_path":   archive_path,
+            }), 200
+
+        # ── Portal caller: return as browser download ─────────────
+        return send_file(
+            io.BytesIO(stamped_bytes),
+            as_attachment=True,
+            download_name=f"{ctrl_full}.pdf",
+            mimetype="application/pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Print error: {e}", exc_info=True)
+        return jsonify({"status": "ERROR", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.getenv("FLASK_PORT", 5000))
     logger.info(f"ORP Engine starting on 127.0.0.1:{port}")
