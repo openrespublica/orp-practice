@@ -1,435 +1,320 @@
 #!/bin/bash
 # ==============================================================================
-# TRUTHCHAIN SECURE PRINT SERVICE SUBSYSTEM INITIALIZATION BLUEPRINT
-# Target Environment: Alpine Linux Standard (Main Core Node)
-# Target User: M-and-M
-# Implementation: Custom Isolated CUPS Backend Mapping to mTLS Gateway
+# setup_truthchain_printing.sh — TruthChain CUPS Print Subsystem
+# ORP Engine — Alpine Linux
+# ==============================================================================
+# Installs and configures the TruthChain virtual printer which pipes
+# all print jobs through the ORP Engine /print endpoint.
+#
+# Every printed document is:
+#   • SHA-256 fingerprinted
+#   • Hash-chained (tamper-evident sequence)
+#   • GPG-signed and archived to the LUKS vault
+#   • Pushed to the GitHub Pages public ledger
+#   • Saved as stamped PDF to ~/pdf_printed_archive/
+#
+# Usage:
+#   doas bash setup_truthchain_printing.sh
 # ==============================================================================
 
+set -euo pipefail
+
 if [ "$(id -u)" -ne 0 ]; then
-    echo "[!] Critical Error: This setup script must be run with root authority." >&2
-    echo "    Execute via: doas bash $0" >&2
+    echo "[✘] Must be run as root: doas bash $0" >&2
     exit 1
 fi
 
-# Detect the actual operator user (the one who invoked doas)
-OPERATOR_USER="${SUDO_USER:-${DOAS_USER:-$(logname 2>/dev/null || echo 'root')}}"
-if [ "$OPERATOR_USER" = "root" ]; then
-    echo "[!] ERROR: This script must be run via 'doas' as a non-root user." >&2
-    echo "    Run: doas bash $0" >&2
+OPERATOR_USER="${DOAS_USER:-${SUDO_USER:-}}"
+if [ -z "$OPERATOR_USER" ] || [ "$OPERATOR_USER" = "root" ]; then
+    echo "[✘] Run via doas as your operator user: doas bash $0" >&2
     exit 1
 fi
 
 OPERATOR_HOME=$(eval echo ~"$OPERATOR_USER")
-echo "[*] Detected operator: $OPERATOR_USER (home: $OPERATOR_HOME)"
+ENGINE_URL="http://127.0.0.1:5000/print"
+ARCHIVE_DIR="$OPERATOR_HOME/pdf_printed_archive"
+PRINTER_NAME="TruthChain"
 
-echo "[*] Phase 1: Refreshing system repositories and constructing core stack..."
-apk update
-apk add bash curl nginx cups cups-filters cups-libs util-linux ghostscript sudo
+echo ""
+echo "══════════════════════════════════════════════════════════════"
+echo "  TruthChain Print Subsystem Setup"
+echo "══════════════════════════════════════════════════════════════"
+echo "  Operator : $OPERATOR_USER"
+echo "  Home     : $OPERATOR_HOME"
+echo "  Engine   : $ENGINE_URL"
+echo "  Archive  : $ARCHIVE_DIR"
+echo "  Printer  : $PRINTER_NAME"
+echo "══════════════════════════════════════════════════════════════"
+echo ""
 
-echo "[*] Phase 2: Building underlying device-class framework directories..."
+# ── Phase 1: Install dependencies ────────────────────────────────
+echo "[*] Phase 1: Installing CUPS and dependencies..."
+apk update --quiet
+apk add --no-cache \
+    cups \
+    cups-filters \
+    cups-libs \
+    ghostscript \
+    curl \
+    bash \
+    file
+
+echo "[✔] Packages installed."
+
+# ── Phase 2: Directory structure ─────────────────────────────────
+echo "[*] Phase 2: Creating directories..."
 mkdir -p /usr/lib/cups/backend/
 mkdir -p /var/log/cups/
+mkdir -p /run/cups/
+chmod 755 /run/cups/
 
-echo "[*] Phase 3: Provisioning cryptographic access security groups..."
-getent group lpadmin >/dev/null || addgroup lpadmin
-getent group sys >/dev/null     || addgroup sys
+mkdir -p "$ARCHIVE_DIR"
+chown -R "$OPERATOR_USER:$OPERATOR_USER" "$ARCHIVE_DIR"
+chmod 700 "$ARCHIVE_DIR"
+echo "[✔] Archive directory: $ARCHIVE_DIR"
 
-<<<<<<< HEAD
-# Add the detected operator user to lpadmin and sys groups
-if id "$OPERATOR_USER" >/dev/null 2>&1; then
-    addgroup "$OPERATOR_USER" lpadmin 2>/dev/null || true
-    addgroup "$OPERATOR_USER" sys 2>/dev/null || true
-    echo "[✔] User '$OPERATOR_USER' added to lpadmin and sys groups"
-else
-    echo "[!] WARNING: User '$OPERATOR_USER' not found in system."
-    exit 1
-fi
+# ── Phase 3: Groups ───────────────────────────────────────────────
+echo "[*] Phase 3: Configuring groups..."
+getent group lpadmin > /dev/null || addgroup lpadmin
+getent group lp      > /dev/null || addgroup lp
 
-addgroup root lpadmin 2>/dev/null || true
-=======
-addgroup M-and-M lpadmin
-addgroup M-and-M sys
-addgroup root lpadmin
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
+addgroup "$OPERATOR_USER" lpadmin 2>/dev/null || true
+addgroup "$OPERATOR_USER" lp      2>/dev/null || true
+addgroup root lpadmin              2>/dev/null || true
 
-echo "[*] Phase 4: Constructing hardened cups-files.conf layout..."
-cat << 'EOF' > /etc/cups/cups-files.conf
+echo "[✔] $OPERATOR_USER added to lpadmin and lp groups."
+
+# ── Phase 4: CUPS configuration ───────────────────────────────────
+echo "[*] Phase 4: Writing CUPS configuration..."
+
+cat > /etc/cups/cups-files.conf << 'CUPSFILES'
 SystemGroup lpadmin sys root
 PeerCred on
-
 AccessLog /var/log/cups/access_log
 ErrorLog /var/log/cups/error_log
 PageLog /var/log/cups/page_log
+CUPSFILES
 
-# Allow lpadmin group socket access
+cat > /etc/cups/cupsd.conf << 'CUPSDCONF'
 Listen 127.0.0.1:631
 Listen /run/cups/cups.sock
-EOF
-
-echo "[*] Phase 5: Generating Custom Cryptographic Pipeline Backend..."
-cat << EOF > /usr/lib/cups/backend/truthchain
-#!/usr/bin/env bash
-PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
-
-<<<<<<< HEAD
-# Device Discovery Directive: If executed with zero parameters, announce capabilities
-if [ -z "\$1" ]; then
-=======
-if [ -z "$1" ]; then
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-    echo 'direct truthchain "Unknown" "TruthChain Secure Cryptographic Printer Endpoint"'
-    exit 0
-fi
-
-<<<<<<< HEAD
-# Capture the 6 standard positional parameters passed natively by the CUPS daemon
-JOB_ID="\$1"
-USER_NAME="\$2"
-JOB_TITLE="\$3"
-COPIES="\$4"
-OPTIONS="\$5"
-INPUT_FILE="\$6"
-
-# ── DEFENSE IN DEPTH: Hardcoded Execution Kill-Switch ──
-AUTHORIZED_USER="$OPERATOR_USER"
-if [ "\$USER_NAME" != "\$AUTHORIZED_USER" ] && [ "\$USER_NAME" != "root" ]; then
-    logger -t "TRUTHCHAIN-PRINTER" "CRITICAL: Unauthorized execution attempt by user: \$USER_NAME. Payload destroyed."
-    exit 1
-fi
-
-# Configuration Boundaries for the local mTLS Portal Nginx Proxy
-ENGINE_URL="https://127.0.0.1:9443/print" 
-MTLS_CERT="$OPERATOR_HOME/.orp_engine/ssl/operator_01.crt"
-MTLS_KEY="$OPERATOR_HOME/.orp_engine/ssl/operator_01.key"
-ARCHIVE_DIR="$OPERATOR_HOME/pdf_printed_archive"
-
-# Establish secure volatile working buffers
-TMP_PAYLOAD=\$(mktemp /tmp/orp_print.XXXXXX)
-RESPONSE_PDF=\$(mktemp /tmp/orp_processed.XXXXXX)
-
-# PostScript to PDF Normalization Pipeline
-if [ -n "\$INPUT_FILE" ] && [ -f "\$INPUT_FILE" ]; then
-    ps2pdf "\$INPUT_FILE" "\$TMP_PAYLOAD"
-else
-    # Capture direct standard input stream from the CUPS pipeline spooler
-    cat <&0 | ps2pdf - "\$TMP_PAYLOAD"
-fi
-
-# Secure Payload Transmission via Mutual TLS Over Loopback Interface
-HTTP_STATUS=\$(curl -s -w "%{http_code}" -o "\$RESPONSE_PDF" \\
-    --cert "\$MTLS_CERT" \\
-    --key "\$MTLS_KEY" \\
-    --insecure \\
-    -H "X-Operator-ID: \$USER_NAME" \\
-    -H "X-Print-Job-Title: \$JOB_TITLE" \\
-    --data-binary "@\$TMP_PAYLOAD" \\
-    "\$ENGINE_URL")
-
-# Transaction Validation and Local Immutable Storage Logging
-if [ "\$HTTP_STATUS" -eq 200 ]; then
-    mkdir -p "\$ARCHIVE_DIR"
-    STAMPED_FILE="\${ARCHIVE_DIR}/Stamped_Job_\${JOB_ID}.pdf"
-    
-    cp "\$RESPONSE_PDF" "\$STAMPED_FILE"
-    chown "$OPERATOR_USER:$OPERATOR_USER" "\$STAMPED_FILE" 2>/dev/null || true
-    chmod 600 "\$STAMPED_FILE"
-=======
-JOB_ID="$1"
-USER_NAME="$2"
-JOB_TITLE="$3"
-COPIES="$4"
-OPTIONS="$5"
-INPUT_FILE="$6"
-
-# ── DEFENSE IN DEPTH: Hardcoded Execution Kill-Switch ──
-if [ "$USER_NAME" != "M-and-M" ]; then
-    logger -t "TRUTHCHAIN-PRINTER" "CRITICAL: Unauthorized execution attempt by user: $USER_NAME. Payload destroyed."
-    exit 1
-fi
-
-ENGINE_URL="https://127.0.0.1:9443/print" 
-MTLS_CERT="/home/M-and-M/.orp_engine/ssl/operator_01.crt"
-MTLS_KEY="/home/M-and-M/.orp_engine/ssl/operator_01.key"
-ARCHIVE_DIR="/home/M-and-M/pdf_printed_archive"
-
-TMP_PAYLOAD=$(mktemp /tmp/orp_print.XXXXXX)
-RESPONSE_PDF=$(mktemp /tmp/orp_processed.XXXXXX)
-
-if [ -n "$INPUT_FILE" ] && [ -f "$INPUT_FILE" ]; then
-    ps2pdf "$INPUT_FILE" "$TMP_PAYLOAD"
-else
-    cat <&0 | ps2pdf - "$TMP_PAYLOAD"
-fi
-
-HTTP_STATUS=$(curl -s -w "%{http_code}" -o "$RESPONSE_PDF" \
-    --cert "$MTLS_CERT" \
-    --key "$MTLS_KEY" \
-    --insecure \
-    -H "X-Operator-ID: $USER_NAME" \
-    -H "X-Print-Job-Title: $JOB_TITLE" \
-    --data-binary "@$TMP_PAYLOAD" \
-    "$ENGINE_URL")
-
-if [ "$HTTP_STATUS" -eq 200 ]; then
-    mkdir -p "$ARCHIVE_DIR"
-    STAMPED_FILE="${ARCHIVE_DIR}/Stamped_Job_${JOB_ID}.pdf"
-    
-    cp "$RESPONSE_PDF" "$STAMPED_FILE"
-    chown M-and-M:M-and-M "$STAMPED_FILE"
-    chmod 600 "$STAMPED_FILE"
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-    
-    logger -t "TRUTHCHAIN-PRINTER" "SUCCESS: Job \${JOB_ID} verified and routed via mTLS proxy."
-    rm -f "\$TMP_PAYLOAD" "\$RESPONSE_PDF"
-    exit 0
-else
-    logger -t "TRUTHCHAIN-PRINTER" "ALERT: Cryptographic pipeline dropped stream. HTTP Code: \$HTTP_STATUS"
-    rm -f "\$TMP_PAYLOAD" "\$RESPONSE_PDF"
-    exit 1
-fi
-EOF
-
-echo "[*] Phase 6: Locking down file execution permissions..."
-chown root:root /usr/lib/cups/backend/truthchain
-chmod 700 /usr/lib/cups/backend/truthchain
-
-<<<<<<< HEAD
-# Pre-stage and secure the local operator's printing archive
-mkdir -p "$OPERATOR_HOME/pdf_printed_archive"
-chown -R "$OPERATOR_USER:$OPERATOR_USER" "$OPERATOR_HOME/pdf_printed_archive"
-chmod 700 "$OPERATOR_HOME/pdf_printed_archive"
-echo "[✔] Archive directory created: $OPERATOR_HOME/pdf_printed_archive"
-=======
-mkdir -p /home/M-and-M/pdf_printed_archive
-chown -R M-and-M:M-and-M /home/M-and-M/pdf_printed_archive
-chmod 700 /home/M-and-M/pdf_printed_archive
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-
-echo "[*] Phase 7: Initiating CUPS Core Daemon..."
-rc-update add cupsd default
-rc-service cupsd restart
-
-echo "[*] Phase 7.5: Initiating Zero-Trust Host Hardening Protocol..."
-
-<<<<<<< HEAD
-# ==============================================================================
-# LAYER 1: Binary Execution Sandbox
-# Strip world-execution rights from all CUPS client binaries.
-# Only users explicitly assigned to the lpadmin group can invoke them.
-# ==============================================================================
-=======
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-echo "  -> Locking down CUPS executable binaries..."
-for binary in lp lpr lpstat cancel cupsdisable cupsenable lpadmin lpinfo lpmove lpoptions; do
-    if [ -f "/usr/bin/$binary" ]; then
-        chown root:lpadmin "/usr/bin/$binary"
-        chmod 750 "/usr/bin/$binary"
-    fi
-    if [ -f "/usr/sbin/$binary" ]; then
-        chown root:lpadmin "/usr/sbin/$binary"
-        chmod 750 "/usr/sbin/$binary"
-    fi
-done
-
-<<<<<<< HEAD
-# ==============================================================================
-# LAYER 2: CUPS Policy Enforcement
-# Force the internal IPP scheduler to accept jobs from lpadmin group members only.
-# ==============================================================================
-=======
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-echo "  -> Rewriting internal IPP access policies..."
-cat << 'EOF' > /etc/cups/cupsd.conf
-Listen 127.0.0.1:631
-Listen [::1]:631
-Listen /run/cups/cups.sock
-
 Browsing Off
+LogLevel warn
+MaxLogSize 1m
 
-<<<<<<< HEAD
-# Default policy: Absolute restriction to lpadmin group
-=======
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
 <Policy default>
-  <Limit Send-Document Send-URI Hold-Job Release-Job Restart-Job Purge-Jobs Set-Job-Attributes Create-Job-Subscription Renew-Subscription Cancel-Subscription Get-Notifications Reprocess-Job Cancel-Current-Job Suspend-Current-Job Resume-Job Cancel-My-Jobs Close-Job CUPS-Move-Job CUPS-Get-Document>
-<<<<<<< HEAD
+  <Limit Send-Document Send-URI Hold-Job Release-Job Restart-Job
+         Purge-Jobs Set-Job-Attributes Create-Job-Subscription
+         Renew-Subscription Cancel-Subscription Get-Notifications
+         Reprocess-Job Cancel-Current-Job Suspend-Current-Job
+         Resume-Job Cancel-My-Jobs Close-Job CUPS-Move-Job
+         CUPS-Get-Document>
     Require user @OWNER @SYSTEM
     Order allow,deny
   </Limit>
 
-  # Administrative operations (only lpadmin group and root)
-  <Limit CUPS-Add-Modify-Printer CUPS-Delete-Printer CUPS-Add-Modify-Class CUPS-Delete-Class CUPS-Set-Default CUPS-Get-Devices>
+  <Limit CUPS-Add-Modify-Printer CUPS-Delete-Printer
+         CUPS-Add-Modify-Class CUPS-Delete-Class
+         CUPS-Set-Default CUPS-Get-Devices>
     AuthType Default
     Require user @SYSTEM
     Order allow,deny
-=======
-    Require user M-and-M
-    Order deny,allow
-  </Limit>
-
-  <Limit CUPS-Add-Modify-Printer CUPS-Delete-Printer CUPS-Add-Modify-Class CUPS-Delete-Class CUPS-Set-Default CUPS-Get-Devices>
-    AuthType None
-    Require user M-and-M @SYSTEM
-    Order deny,allow
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
   </Limit>
 
   <Limit All>
     Order allow,deny
   </Limit>
 </Policy>
-EOF
+CUPSDCONF
 
-# Ensure CUPS socket directory exists and has proper permissions
-mkdir -p /run/cups
-chmod 755 /run/cups
+echo "[✔] CUPS configuration written."
 
-rc-service cupsd restart
-<<<<<<< HEAD
+# ── Phase 5: TruthChain backend ───────────────────────────────────
+echo "[*] Phase 5: Installing TruthChain backend..."
 
-echo "  -> Print subsystem hardening complete (kill-switch embedded)."
-=======
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-echo "[+] Hardening Protocol Complete. Print subsystem is now isolated."
+cat > /usr/lib/cups/backend/truthchain << BACKEND
+#!/bin/bash
+# TruthChain CUPS Backend — ORP Engine Integration
+# Stamps every print job via the ORP Engine /print endpoint.
+# Saves stamped PDF to $ARCHIVE_DIR automatically.
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
-# ==============================================================================
-# Phase 8: Register the TruthChain Endpoint
-# ==============================================================================
-echo "[*] Phase 8: Registering the TruthChain Endpoint into the CUPS Spooler Matrix..."
-<<<<<<< HEAD
-
-# Wait for CUPS daemon to be fully ready
-sleep 2
-
-# Ensure CUPS socket is accessible
-if [ ! -S /run/cups/cups.sock ]; then
-    echo "[!] WARNING: CUPS socket not ready. Waiting..."
-    sleep 3
+# Device discovery — required by CUPS protocol
+if [ -z "\$1" ]; then
+    echo 'direct truthchain "Unknown" "TruthChain Secure Stamp Printer"'
+    exit 0
 fi
 
-# Check if the printer destination already exists
-if lpstat -p -d 2>/dev/null | grep -q "TruthChain_Standard_Printer"; then
-    echo "[✔] Destination already registered. Skipping registration..."
+JOB_ID="\$1"
+USER_NAME="\$2"
+JOB_TITLE="\$3"
+COPIES="\$4"
+OPTIONS="\$5"
+INPUT_FILE="\${6:-}"
+
+ENGINE_URL="$ENGINE_URL"
+ARCHIVE_DIR="$ARCHIVE_DIR"
+OPERATOR="$OPERATOR_USER"
+LOG_TAG="TRUTHCHAIN"
+
+# Authorization check
+if [ "\$USER_NAME" != "\$OPERATOR" ] && [ "\$USER_NAME" != "root" ]; then
+    logger -t "\$LOG_TAG" "BLOCKED: Unauthorized job from \$USER_NAME"
+    exit 1
+fi
+
+logger -t "\$LOG_TAG" "Job \$JOB_ID: '\$JOB_TITLE' from \$USER_NAME"
+
+# Prepare temp files
+TMP_IN=\$(mktemp /tmp/orp_print_in.XXXXXX)
+TMP_OUT=\$(mktemp /tmp/orp_print_out.XXXXXX)
+
+cleanup() { rm -f "\$TMP_IN" "\$TMP_OUT"; }
+trap cleanup EXIT
+
+# Get PDF input
+if [ -n "\$INPUT_FILE" ] && [ -f "\$INPUT_FILE" ]; then
+    cp "\$INPUT_FILE" "\$TMP_IN"
 else
-    echo "[*] Registering new printer destination via CUPS administrative interface..."
-    
-    # Use cupsd's internal administration to bypass lpadmin authentication
-    # Write directly to CUPS configuration via cupsctl or printers.conf manipulation
-    cat << 'PRINTERS_CONF' >> /etc/cups/printers.conf
-<Printer TruthChain_Standard_Printer>
-UUID urn:uuid:truthchain-secure-printer-001
-Info TruthChain Secure Cryptographic Printer Endpoint
-Location Sovereign Verification Desk
-MakeModel Raw
-DeviceURI truthchain://127.0.0.1/print
-State Idle
-StateTime $(date +%s)
-Shared No
-JobPrivateAccess default
-JobPrivateValues default
-SubscriptionPrivateAccess default
-SubscriptionPrivateValues default
-</Printer>
-PRINTERS_CONF
-    
-    # Reload CUPS configuration to register the new printer
-    rc-service cupsd restart
-    sleep 1
-    
-    # Verify the printer was registered
-    if lpstat -p -d 2>/dev/null | grep -q "TruthChain_Standard_Printer"; then
-        echo "[✔] Printer registered via configuration file."
-    else
-        echo "[!] WARNING: Printer registration via config file incomplete."
-        echo "    Attempting fallback with lpadmin (non-interactive mode)..."
-        
-        # Last resort: try lpadmin with stdin echo (timeout after 5 seconds)
-        timeout 5 bash -c 'echo "" | lpadmin -p TruthChain_Standard_Printer \
-            -E \
-            -v "truthchain://127.0.0.1/print" \
-            -m raw \
-            -L "Sovereign Verification Desk" \
-            -o printer-is-shared=false' 2>&1 || true
+    cat > "\$TMP_IN"
+fi
+
+# Convert PostScript to PDF if needed
+if command -v file > /dev/null 2>&1; then
+    if file "\$TMP_IN" 2>/dev/null | grep -q "PostScript"; then
+        TMP_PDF=\$(mktemp /tmp/orp_converted.XXXXXX.pdf)
+        ps2pdf "\$TMP_IN" "\$TMP_PDF" 2>/dev/null && mv "\$TMP_PDF" "\$TMP_IN" \
+            || rm -f "\$TMP_PDF"
     fi
 fi
 
-# ==============================================================================
-# Phase 9: Audit and Verify
-# ==============================================================================
-echo ""
-echo "[*] Phase 9: Auditing active spooler state configuration..."
+# Sanitize job title for doc_type field
+DOC_TYPE=\$(echo "\$JOB_TITLE" \
+    | tr '[:lower:]' '[:upper:]' \
+    | tr -cs 'A-Z0-9' '-' \
+    | sed 's/^-//;s/-\$//' \
+    | cut -c1-20)
+[ -z "\$DOC_TYPE" ] && DOC_TYPE="PRINT"
 
+# POST to ORP Engine
+HTTP_STATUS=\$(curl -s \
+    -w "%{http_code}" \
+    -o "\$TMP_OUT" \
+    -X POST \
+    -H "X-Print-Source: cups" \
+    -H "X-Operator-ID: \$USER_NAME" \
+    -H "X-Print-Job-Title: \$JOB_TITLE" \
+    -F "document=@\${TMP_IN};type=application/pdf" \
+    -F "doc_type=\${DOC_TYPE}" \
+    "\$ENGINE_URL" 2>/dev/null)
+
+if [ "\$HTTP_STATUS" = "200" ]; then
+    # Save stamped PDF to archive
+    STAMP_FILE="\${ARCHIVE_DIR}/Job_\${JOB_ID}_\${DOC_TYPE}.pdf"
+    cp "\$TMP_OUT" "\$STAMP_FILE"
+    chown "\$OPERATOR:\$OPERATOR" "\$STAMP_FILE" 2>/dev/null || true
+    chmod 600 "\$STAMP_FILE"
+    logger -t "\$LOG_TAG" "SUCCESS: Job \$JOB_ID → \$STAMP_FILE"
+    exit 0
+else
+    BODY=\$(cat "\$TMP_OUT" 2>/dev/null | head -c 200)
+    logger -t "\$LOG_TAG" "FAILED: Job \$JOB_ID HTTP=\$HTTP_STATUS body=\$BODY"
+    exit 1
+fi
+BACKEND
+
+chown root:root /usr/lib/cups/backend/truthchain
+chmod 700 /usr/lib/cups/backend/truthchain
+echo "[✔] Backend installed: /usr/lib/cups/backend/truthchain"
+
+# ── Phase 6: Harden CUPS binaries ────────────────────────────────
+echo "[*] Phase 6: Hardening CUPS binaries..."
+for binary in lp lpr lpstat cancel cupsdisable cupsenable \
+              lpadmin lpinfo lpmove lpoptions; do
+    for dir in /usr/bin /usr/sbin; do
+        if [ -f "$dir/$binary" ]; then
+            chown root:lpadmin "$dir/$binary"
+            chmod 750 "$dir/$binary"
+        fi
+    done
+done
+echo "[✔] CUPS binaries locked to lpadmin group."
+
+# ── Phase 7: Start CUPS ───────────────────────────────────────────
+echo "[*] Phase 7: Starting CUPS daemon..."
+rc-update add cupsd default 2>/dev/null || true
+rc-service cupsd restart
+sleep 2
+
+if ! rc-service cupsd status > /dev/null 2>&1; then
+    echo "[✘] CUPS failed to start — check: /var/log/cups/error_log"
+    exit 1
+fi
+echo "[✔] CUPS daemon running."
+
+# ── Phase 8: Register TruthChain printer ─────────────────────────
+echo "[*] Phase 8: Registering TruthChain printer..."
+
+# Remove old registration if exists
+lpadmin -x "$PRINTER_NAME" 2>/dev/null || true
 sleep 1
 
-# Check if printer was registered
-PRINTER_CHECK=$(lpstat -p -d 2>/dev/null | grep "TruthChain_Standard_Printer" || true)
+lpadmin -p "$PRINTER_NAME" \
+    -E \
+    -v "truthchain://localhost/stamp" \
+    -m drv:///sample.drv/generic.ppd \
+    -D "TruthChain Secure Stamp Printer" \
+    -L "ORP Engine — Sovereign Verification" \
+    -u "allow:$OPERATOR_USER" \
+    -o printer-is-shared=false \
+    -o media=A4 2>/dev/null || \
+lpadmin -p "$PRINTER_NAME" \
+    -E \
+    -v "truthchain://localhost/stamp" \
+    -P /usr/share/cups/model/Generic-PDF_Printer-PDF.ppd \
+    -D "TruthChain Secure Stamp Printer" \
+    -L "ORP Engine — Sovereign Verification" \
+    -u "allow:$OPERATOR_USER" \
+    -o printer-is-shared=false 2>/dev/null || \
+lpadmin -p "$PRINTER_NAME" \
+    -E \
+    -v "truthchain://localhost/stamp" \
+    -D "TruthChain Secure Stamp Printer" \
+    -L "ORP Engine — Sovereign Verification" \
+    -u "allow:$OPERATOR_USER" \
+    -o printer-is-shared=false
 
-if [ -n "$PRINTER_CHECK" ]; then
-    echo "[✔] SUCCESS: Spooler mapping verified."
-    echo "$PRINTER_CHECK"
-    echo ""
-=======
-if lpstat -p "TruthChain_Standard_Printer" >/dev/null 2>&1; then
-    echo "[*] Destination already registered. Updating configuration..."
-fi
+# Set as system default
+lpadmin -d "$PRINTER_NAME"
 
-lpadmin -p "TruthChain_Standard_Printer" \
-        -E \
-        -v "truthchain://127.0.0.1/print" \
-        -m raw \
-        -u allow:M-and-M \
-        -L "Sovereign Verification Desk" \
-        -o printer-is-shared=false
+echo "[✔] Printer registered: $PRINTER_NAME"
 
-echo "[*] Phase 9: Auditing active spooler state configuration..."
-if lpstat -p "TruthChain_Standard_Printer" -v | grep -q "truthchain://"; then
-    echo "[+] SUCCESS: Spooler mapping verified live."
->>>>>>> a3a951b (chore: commit local changes to unblock sync)
-    echo "------------------------------------------------------------"
-    lpq -P TruthChain_Standard_Printer 2>/dev/null || echo "Queue ready (no jobs)"
-    echo "------------------------------------------------------------"
-else
-    echo "[!] WARNING: Printer not showing in lpstat."
-    echo ""
-    echo "    The backend is installed and will function when:"
-    echo "    1. CUPS reloads its configuration"
-    echo "    2. Manual printer registration is completed"
-    echo ""
-    echo "    To complete manual registration, run as root:"
-    echo ""
-    echo "    # lpadmin -p TruthChain_Standard_Printer -E \\"
-    echo "            -v 'truthchain://127.0.0.1/print' \\"
-    echo "            -m raw -L 'Sovereign Verification Desk' \\"
-    echo "            -o printer-is-shared=false"
-    echo ""
-    echo "    Then verify with:"
-    echo "    # lpstat -p -d"
-fi
+# ── Phase 9: Verify ───────────────────────────────────────────────
+echo ""
+echo "[*] Phase 9: Verification..."
+sleep 1
+
+lpstat -p "$PRINTER_NAME" -v 2>/dev/null && \
+    echo "[✔] Printer status confirmed." || \
+    echo "[!] lpstat check failed — may need group re-login."
 
 echo ""
-echo "=============================================================================="
-echo "[+] SUCCESS: TruthChain Secure Printing Pipeline Setup Complete!"
-echo "=============================================================================="
+echo "══════════════════════════════════════════════════════════════"
+echo "  ✅ TruthChain Print Subsystem Ready"
+echo "══════════════════════════════════════════════════════════════"
 echo ""
-echo "Configuration Summary:"
-echo "  Backend installed at    : /usr/lib/cups/backend/truthchain"
-echo "  Archive directory       : $OPERATOR_HOME/pdf_printed_archive"
-echo "  Authorized operator     : $OPERATOR_USER"
-echo "  CUPS socket             : /run/cups/cups.sock"
-echo "  System groups           : lpadmin, sys"
+echo "  Printer name : $PRINTER_NAME (system default)"
+echo "  Backend      : /usr/lib/cups/backend/truthchain"
+echo "  Archive dir  : $ARCHIVE_DIR"
+echo "  Engine URL   : $ENGINE_URL"
 echo ""
-echo "Backend Status:"
-if [ -f /usr/lib/cups/backend/truthchain ]; then
-    echo "  ✔ Backend script installed"
-    echo "  ✔ Permissions: $(ls -l /usr/lib/cups/backend/truthchain | awk '{print $1, $3, $4}')"
-fi
+echo "  Usage:"
+echo "    Ctrl+P in browser → select '$PRINTER_NAME' → Print"
+echo "    Stamped PDF saved to: $ARCHIVE_DIR"
 echo ""
-echo "To test the printer:"
-echo "  $ lp -d TruthChain_Standard_Printer /path/to/document.pdf"
+echo "  ⚠️  You may need to log out and back in for group"
+echo "     membership changes (lpadmin, lp) to take effect."
 echo ""
-echo "To debug CUPS issues:"
-echo "  $ lpstat -p -d              # Check all printers"
-echo "  $ tail -f /var/log/cups/error_log   # Watch CUPS errors"
-echo "  $ tail -f /var/log/cups/access_log  # Watch CUPS access"
+echo "  To test:"
+echo "    lp -d $PRINTER_NAME /path/to/document.pdf"
 echo ""
