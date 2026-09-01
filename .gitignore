@@ -67,3 +67,7 @@ build/
 # GitHub Pages build output (if used locally)
 public/.lesshst
 .local/
+
+# Runtime files — managed by engine, not git
+docs/control_number.txt
+*.log
