@@ -116,8 +116,14 @@ orp_unlock_vault() {
     local boot_dev luks_dev boot_mount keyfile_path
 
     # ── Find FAT32 boot partition by UUID ─────────────────────────
-    # Alpine uses blkid differently — no -U flag, use -t UUID=
-    boot_dev=$(blkid -t "UUID=$ORP_USB_BOOT_UUID" -o device 2>/dev/null || true)
+    # Try lsblk first (reliable on Alpine even when udisks2 has auto-mounted)
+    # then fall back to blkid
+    local boot_dev
+    boot_dev=$(lsblk -o UUID,PATH -rn 2>/dev/null                | awk -v uuid="$ORP_USB_BOOT_UUID"                  'toupper($1) == toupper(uuid) {print $2}'                | head -1 || true)
+
+    if [ -z "$boot_dev" ]; then
+        boot_dev=$(doas blkid -t "UUID=$ORP_USB_BOOT_UUID"                        -o device 2>/dev/null || true)
+    fi
 
     if [ -z "$boot_dev" ]; then
         orp_die "Kingston USB not found.
@@ -171,9 +177,15 @@ orp_unlock_vault() {
     }
 
     # ── Find LUKS partition by UUID ───────────────────────────────
-    luks_dev=$(blkid -t "UUID=$ORP_USB_LUKS_UUID" -o device 2>/dev/null || true)
+    luks_dev=$(lsblk -o UUID,PATH -rn 2>/dev/null                | awk -v uuid="$ORP_USB_LUKS_UUID"                  'toupper($1) == toupper(uuid) {print $2}'                | head -1 || true)
+
     if [ -z "$luks_dev" ]; then
-        doas umount "$boot_mount"; rmdir "$boot_mount"
+        luks_dev=$(doas blkid -t "UUID=$ORP_USB_LUKS_UUID"                        -o device 2>/dev/null || true)
+    fi
+
+    if [ -z "$luks_dev" ]; then
+        doas umount "$boot_mount" 2>/dev/null || true
+        rmdir "$boot_mount" 2>/dev/null || true
         orp_die "LUKS vault partition not found (UUID: $ORP_USB_LUKS_UUID)."
     fi
 
@@ -292,8 +304,7 @@ orp_start_usb_watchdog() {
         while true; do
             sleep 2
             # Alpine blkid: check if LUKS UUID still visible
-            if ! blkid -t "UUID=$ORP_USB_LUKS_UUID" \
-                    -o device > /dev/null 2>&1; then
+            if ! lsblk -o UUID -rn 2>/dev/null                     | grep -qi "^${ORP_USB_LUKS_UUID}$"; then
                 printf '\n[!!!] CRITICAL: Kingston USB removed!\n'
                 printf '      Terminating engine and sealing vault...\n'
                 kill -TERM "$engine_pid" 2>/dev/null || true
