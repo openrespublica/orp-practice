@@ -113,6 +113,18 @@ print((exp - datetime.date.today()).days)
 orp_unlock_vault() {
     printf '[*] Locating Kingston USB vault...\n'
 
+    # If vault is already mounted from a previous session, reuse it
+    if mountpoint -q "${ORP_VAULT_MOUNT}" 2>/dev/null; then
+        printf '[✔] Vault already mounted at %s — reusing.\n' "$ORP_VAULT_MOUNT"
+        export ORP_RECORDS_DIR="$ORP_VAULT_MOUNT/records"
+        export ORP_PDFS_DIR="$ORP_VAULT_MOUNT/pdfs"
+        export ORP_BACKUP_DIR="$ORP_VAULT_MOUNT/backups"
+        export ORP_AUDIT_LOG="$ORP_VAULT_MOUNT/audit_log/engine.log"
+        export ORP_CHAIN_FILE="$ORP_VAULT_MOUNT/chain.json"
+        mkdir -p "$ORP_RECORDS_DIR" "$ORP_PDFS_DIR"                  "$ORP_BACKUP_DIR" "$(dirname "$ORP_AUDIT_LOG")"
+        return 0
+    fi
+
     local boot_dev luks_dev boot_mount keyfile_path
 
     # ── Find FAT32 boot partition by UUID ─────────────────────────
