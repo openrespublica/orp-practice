@@ -4,6 +4,27 @@
     "signer": "MARCO C. FERNANDEZ",
     "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
     "operator_identity": "M-and-M",
+    "document_type": "MARCO-FERNANDEZ-APPL",
+    "print_source": "cups",
+    "control_number": "Verified_2026-0009-MARCO-FERNANDEZ-APPL",
+    "sequence": 9,
+    "sha256_hash": "845ccf0e841b9a4f9fd6d39e77f04fea2b7c91c545a7c7b0b3f43bb4725d4007",
+    "chain_hash": "e4c6d93910f4e177d0a00e8eeeb0c7047b1f03355db4af2028732652b4bb79a3",
+    "timestamp": "2026-09-15 03:33 PM PHT",
+    "timestamp_iso": "2026-09-15T15:33:20.975631+08:00",
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=845ccf0e841b9a4f9fd6d39e77f04fea2b7c91c545a7c7b0b3f43bb4725d4007",
+    "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"e4c6d93910f4e177d0a00e8eeeb0c7047b1f03355db4af2028732652b4bb79a3\", \"control_number\": \"Verified_2026-0009-MARCO-FERNANDEZ-APPL\", \"document_type\": \"MARCO-FERNANDEZ-APPL\", \"operator_identity\": \"M-and-M\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"print_source\": \"cups\", \"sequence\": 9, \"sha256_hash\": \"845ccf0e841b9a4f9fd6d39e77f04fea2b7c91c545a7c7b0b3f43bb4725d4007\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"PRINTED \\u2705\", \"timestamp\": \"2026-09-15 03:33 PM PHT\", \"timestamp_iso\": \"2026-09-15T15:33:20.975631+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=845ccf0e841b9a4f9fd6d39e77f04fea2b7c91c545a7c7b0b3f43bb4725d4007\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQTgLQV1Imy3HV0f/tO6ZaT8GJvZJgUCaqj0xAAKCRC6ZaT8GJvZ\nJjAsAP91EizBUyUSXlfLVxba/FG8Begg3ji/hFzmcM7LQJ2TfAEA/Mr9whFCIykz\nKkmfeLZTG4QE1ftXq1yS2KnGMLlMdAk=\n=LHUo\n-----END PGP SIGNATURE-----\n",
+      "record_hash": "23c8f8d3dc2b9a0f4e5a8642682fb35ec2280c5faf92a9c184639bb450754862",
+      "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+    }
+  },
+  {
+    "status": "PRINTED \u2705",
+    "signer": "MARCO C. FERNANDEZ",
+    "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+    "operator_identity": "M-and-M",
     "document_type": "BARANGAY-CERTIFICATI",
     "print_source": "cups",
     "control_number": "Verified_2026-0008-BARANGAY-CERTIFICATI",
