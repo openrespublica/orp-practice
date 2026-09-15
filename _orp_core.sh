@@ -301,14 +301,19 @@ orp_start_usb_watchdog() {
     printf '[*] USB watchdog active (engine PID: %s)...\n' "$engine_pid"
 
     (
+        # Give engine 10 seconds to fully initialize before watching
+        sleep 10
+
         while true; do
-            sleep 2
-            # Alpine blkid: check if LUKS UUID still visible
-            if ! lsblk -o UUID -rn 2>/dev/null                     | grep -qi "^${ORP_USB_LUKS_UUID}$"; then
+            sleep 3
+
+            # Check if LUKS partition UUID is still visible via lsblk
+            # Use case-insensitive match; strip whitespace
+            if ! lsblk -o UUID -rn 2>/dev/null                     | tr -d " "                     | grep -qi "^${ORP_USB_LUKS_UUID}$"; then
                 printf '\n[!!!] CRITICAL: Kingston USB removed!\n'
                 printf '      Terminating engine and sealing vault...\n'
                 kill -TERM "$engine_pid" 2>/dev/null || true
-                sleep 1
+                sleep 2
                 kill -KILL "$engine_pid" 2>/dev/null || true
                 orp_lock_vault
                 printf '[✔] Engine stopped. Vault sealed.\n'

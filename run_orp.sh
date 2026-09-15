@@ -55,7 +55,7 @@ printf '[*] Launching Gunicorn on 127.0.0.1:%s...\n' "${FLASK_PORT:-5000}"
     main:app &
 
 GUNICORN_PID=$!
-sleep 2
+sleep 5
 
 if ! kill -0 "$GUNICORN_PID" 2>/dev/null; then
     printf '[✘] Gunicorn failed to start — check errors above.\n'
