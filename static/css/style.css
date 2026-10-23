@@ -1,1098 +1,592 @@
 /* ============================================================
-   OpenResPublica TruthChain — Civic Document Design System
-   style.css — single source of truth for all portal styling
-
-   Structure:
-     1.  CSS Variables (global design tokens)
-     2.  Base / Reset
-     3.  Topbar
-     4.  Layout (sidebar + main content)
-     5.  Sidebar & Navigation
-     6.  Panels
-     7.  Tables & Ledger
-     8.  Dashboard Stats
-     9.  Civic Section Block
-     10. Alerts
-     11. Forms & Inputs
-     12. Buttons
-     13. File Drop Zone
-     14. Progress Indicator
-     15. Result Box
-     16. Spinner
-     17. Footer
-     18. Media Queries (Responsive)
+   ORP Engine — Operator Portal
+   System font stack — no external dependencies, CSP-safe.
+   Civic design system: navy / gold / off-white.
    ============================================================ */
 
-/* Google Fonts — loaded once, used via CSS variables below.
-   Playfair Display : panel titles, stat values (serif, civic feel)
-   Source Sans 3    : body text, labels, UI copy (clean, readable)
-   IBM Plex Mono    : hashes, control numbers, code (fixed-width) */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@300;400;500;600&display=swap');
-
-
-/* ── 1. CSS VARIABLES ────────────────────────────────────────────
-   Define all colors and fonts once here — the "global scope" for styling.
-   To change the brand color across the entire portal, change one line here.
-   All rules below reference these variables via var(--name). */
+/* ── 1. Design tokens ────────────────────────────────────────── */
 :root {
-    /* Brand colors */
-    --navy:       #002147;   /* darkest — used for hover states */
-    --navy-deep:  #001530;   /* topbar background */
-    --navy-mid:   #003366;   /* primary action color — buttons, active nav, titles */
-    --gold:       #C9A84C;   /* accent — topbar border, section markers, badges */
-    --gold-pale:  #FDF3D0;   /* light gold — badge backgrounds, hover tints */
+    --navy:       #002147;
+    --navy-deep:  #001530;
+    --navy-mid:   #003366;
+    --navy-light: #e8edf4;
+    --gold:       #C9A84C;
+    --gold-pale:  #FDF3D0;
+    --gold-dark:  #9a7a30;
 
-    /* Neutral colors */
-    --white:  #FAFAF7;   /* off-white — page background alternative */
-    --ink:    #1A1A2E;   /* body text */
-    --muted:  #6B7280;   /* secondary text, labels, placeholders */
-    --border: rgba(0, 33, 71, 0.1);  /* subtle borders throughout */
+    --white:   #FAFAF7;
+    --ink:     #1A1A2E;
+    --muted:   #6B7280;
+    --border:  rgba(0,33,71,.1);
+    --surface: #F0F2F5;
 
-    /* Semantic colors */
-    --green:      #1E7A3E;   /* success states */
-    --green-pale: #F0FAF4;   /* success backgrounds */
-    --red:        #B91C1C;   /* error states */
-    --red-pale:   #FEF2F2;   /* error backgrounds */
-    --blue-pale:  #EFF6FF;   /* info alert background */
+    --green:       #1E7A3E;
+    --green-pale:  #F0FAF4;
+    --green-border:#86EFAC;
+    --red:         #B91C1C;
+    --red-pale:    #FEF2F2;
+    --red-border:  #FCA5A5;
+    --amber:       #92400E;
+    --amber-pale:  #FFFBEB;
+    --blue-pale:   #EFF6FF;
 
-    /* Typography */
-    --font-serif: 'Playfair Display', serif;
-    --font-sans:  'Source Sans 3', sans-serif;
-    --font-mono:  'IBM Plex Mono', monospace;
-    
-    /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.2s ease;
-    --transition-smooth: 0.5s ease;
+    /* System font stack — fast, CSP-safe, familiar */
+    --font-serif: ui-serif, Georgia, 'Times New Roman', serif;
+    --font-sans:  ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                  'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:  ui-monospace, 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+
+    --radius-sm: 6px;
+    --radius:    10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+    --shadow:    0 4px 6px -1px rgba(0,0,0,.07);
+    --transition: .15s ease;
 }
 
-/* Dark mode support (optional) */
 @media (prefers-color-scheme: dark) {
     :root {
-        --white: #1F2937;
-        --ink: #F3F4F6;
-        --muted: #9CA3AF;
-        --border: rgba(255, 255, 255, 0.1);
+        --white:   #1a2035;
+        --ink:     #e8edf4;
+        --muted:   #8b95a8;
+        --border:  rgba(255,255,255,.08);
+        --surface: #111827;
     }
 }
 
+/* ── 2. Reset ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
-/* ── 2. BASE / RESET ─────────────────────────────────────────────
-   Remove browser default margin/padding, set the base font and color.
-   Normalize across all browsers. */
-* {
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
     margin: 0;
-    padding: 0;
     font-family: var(--font-sans);
-    background: #F0F2F5;
+    background: var(--surface);
     color: var(--ink);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
-/* Accessibility: high contrast mode support */
-@media (prefers-contrast: more) {
-    body {
-        background: #ffffff;
-    }
-}
-
-
-/* ── 3. TOPBAR ───────────────────────────────────────────────────
-   Sticky header — stays at the top as the user scrolls.
-   z-index:100 keeps it above all panel content. */
+/* ── 3. Topbar ───────────────────────────────────────────────── */
 .topbar {
     background: var(--navy-deep);
     border-bottom: 3px solid var(--gold);
     position: sticky;
     top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 200;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 
 .topbar-inner {
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding: 0.75rem 1.5rem;
+    padding: .7rem 1.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
 }
 
-/* Brand — logo badge + name + subtitle */
-.brand { 
-    display: flex; 
-    align-items: center; 
-    gap: 0.85rem;
-    flex: 1;
+.brand {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
 }
 
 .brand-badge {
-    width: 36px;
-    height: 36px;
+    width: 34px; height: 34px;
     background: var(--gold);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
     font-size: 1.1rem;
     flex-shrink: 0;
 }
 
-.brand h1 { 
-    font-family: var(--font-serif); 
-    font-size: 1rem; 
-    color: #fff; 
-    margin: 0; 
+.brand h1 {
+    font-family: var(--font-serif);
+    font-size: .95rem;
+    color: #fff;
+    margin: 0;
     font-weight: 700;
+    letter-spacing: .01em;
 }
 
-.brand p  { 
-    font-size: 0.65rem; 
-    color: var(--gold); 
-    margin: 0; 
-    opacity: 0.8;
+.brand p {
+    font-size: .62rem;
+    color: var(--gold);
+    margin: 0;
+    opacity: .8;
 }
 
-/* Right side — status indicator + lock button */
-.topbar-right { 
-    color: #fff; 
-    font-size: 0.85rem; 
-    display: flex; 
-    align-items: center; 
-    gap: 0.5rem;
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: #fff;
+    font-size: .82rem;
     white-space: nowrap;
 }
 
-/* Animated green dot — "engine online" indicator */
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background: #22C55E;
+/* Status pip */
+.status-pip {
+    width: 8px; height: 8px;
     border-radius: 50%;
-    box-shadow: 0 0 8px #22C55E;
-    animation: pulse 2s ease-in-out infinite;
+    background: #6B7280;
+    transition: background var(--transition);
 }
+.status-pip--online  { background: #22C55E; box-shadow: 0 0 6px #22C55E; animation: blink 2.5s ease-in-out infinite; }
+.status-pip--offline { background: #EF4444; }
 
-@keyframes pulse {
+@keyframes blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50%       { opacity: .45; }
 }
 
-/* Lock Engine button — styled to match the topbar, not a full button */
-.logout-link {
-    color: #fff;
-    font-weight: 600;
-    opacity: 0.8;
+.btn-lock-top {
     background: none;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255,255,255,.25);
+    color: #fff;
     padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: .72rem;
     font-family: inherit;
+    font-weight: 600;
     cursor: pointer;
-    transition: opacity var(--transition-fast), background var(--transition-fast);
+    transition: background var(--transition), border-color var(--transition);
+}
+.btn-lock-top:hover    { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.5); }
+.btn-lock-top:disabled { opacity: .5; cursor: not-allowed; }
+.btn-lock-top:focus-visible { outline: 2px solid rgba(255,255,255,.5); outline-offset: 2px; }
+
+/* ── 4. Vault status strip ───────────────────────────────────── */
+.vault-strip {
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    padding: .4rem 1.5rem;
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--border);
+    font-size: .75rem;
+    color: var(--muted);
+    flex-wrap: wrap;
 }
 
-.logout-link:hover { 
-    opacity: 1; 
-    background: rgba(255, 255, 255, 0.1);
+.vault-pill {
+    font-weight: 700;
+    font-size: .72rem;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: .02em;
 }
+.vault-pill--mounted { background: var(--green-pale); color: var(--green); border: 1px solid var(--green-border); }
+.vault-pill--sealed  { background: var(--amber-pale); color: var(--amber); border: 1px solid #FDE68A; }
 
-.logout-link:active {
-    transform: scale(0.98);
-}
+.vault-stat { color: var(--muted); }
 
-.logout-link:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Focus visible for accessibility */
-.logout-link:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.5);
-    outline-offset: 2px;
-}
-
-
-/* ── 4. LAYOUT ───────────────────────────────────────────────────
-   Two-column flex layout: sidebar (fixed) + main content (flexible).
-   max-width centers the content on wide screens. */
+/* ── 5. Layout ───────────────────────────────────────────────── */
 .layout {
     display: flex;
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 1.5rem auto;
-    gap: 1.5rem;
     padding: 0 1.5rem;
+    gap: 1.5rem;
     min-height: 80vh;
 }
 
-.sidebar { 
-    width: 260px; 
-    flex-shrink: 0;
-}
+.sidebar { width: 240px; flex-shrink: 0; }
+.main-content { flex: 1; min-width: 0; }
 
-.main-content { 
-    flex-grow: 1; 
-    min-width: 0;
-}
-
-/* min-width:0 prevents flex children from overflowing on narrow screens */
-
-
-/* ── 5. SIDEBAR & NAVIGATION ─────────────────────────────────────
-   Section headers are purely visual labels — not interactive. */
+/* ── 6. Sidebar ──────────────────────────────────────────────── */
 .sidebar-section {
-    font-size: 0.65rem;
+    font-size: .65rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: .1em;
     color: var(--muted);
     font-weight: 700;
-    margin: 1.5rem 0 0.5rem 0.75rem;
+    margin: 1.25rem 0 .4rem .75rem;
 }
 
-/* Nav items — both <button> and <a> use this class for consistent appearance. */
 .nav-item {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 0.85rem 1rem;
+    padding: .75rem 1rem;
     border: none;
     background: none;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     color: var(--navy-mid);
     font-family: inherit;
     font-weight: 500;
-    font-size: 0.88rem;
+    font-size: .87rem;
     cursor: pointer;
     text-align: left;
     text-decoration: none;
-    margin-bottom: 0.25rem;
-    box-sizing: border-box;
-    transition: background var(--transition-fast);
+    margin-bottom: .2rem;
+    transition: background var(--transition);
 }
+.nav-item:hover          { background: rgba(0,51,102,.06); }
+.nav-item.active         { background: var(--navy-mid); color: #fff; font-weight: 600; }
+.nav-item:focus-visible  { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
+.nav-icon                { margin-right: 10px; font-size: 1rem; flex-shrink: 0; }
 
-.nav-item:hover { 
-    background: rgba(0, 33, 102, 0.05);
-}
-
-.nav-item.active { 
-    background: var(--navy-mid); 
-    color: #fff;
-    font-weight: 600;
-}
-
-/* Focus visible for accessibility */
-.nav-item:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
-}
-
-/* Icon inside each nav item */
-.nav-icon { 
-    margin-right: 12px; 
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-
-/* ── 6. PANELS ───────────────────────────────────────────────────
-   All panels exist in the DOM. CSS hides them all by default.
-   JavaScript adds/removes "active" to show the correct one. */
+/* ── 7. Panels ───────────────────────────────────────────────── */
 .panel {
     background: #fff;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow);
     display: none;
-    animation: slideIn 0.3s ease;
 }
+.panel.active { display: block; animation: fadeUp .2s ease; }
 
-.panel.active { 
-    display: block;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .panel-header {
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: .85rem;
 }
+.panel-icon    { font-size: 1.6rem; flex-shrink: 0; }
+.panel-title   { font-family: var(--font-serif); font-size: 1.2rem; color: var(--navy-mid); font-weight: 700; }
+.panel-subtitle{ font-size: .83rem; color: var(--muted); margin-top: .1rem; }
+.panel-body    { padding: 1.5rem; }
 
-.panel-icon { 
-    font-size: 1.8rem;
-    flex-shrink: 0;
+/* ── 8. Info block ───────────────────────────────────────────── */
+.info-block {
+    background: var(--navy-light);
+    border-left: 4px solid var(--navy-mid);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: .85rem 1rem;
+    font-size: .86rem;
+    color: var(--navy);
+    margin-bottom: 1rem;
 }
+.info-block p  { margin: 0; }
+.info-block ul { color: var(--muted); }
 
-.panel-title { 
-    font-family: var(--font-serif); 
-    font-size: 1.25rem; 
-    color: var(--navy-mid); 
-    font-weight: 700;
-}
-
-.panel-subtitle { 
-    font-size: 0.85rem; 
-    color: var(--muted);
-}
-
-.panel-body { 
-    padding: 1.5rem;
-}
-
-
-/* ── 7. TABLES & LEDGER ──────────────────────────────────────────
-   Used in the Local Ledger panel. */
-table { 
-    width: 100%; 
-    border-collapse: collapse;
-}
-
-th {
-    text-align: left;
-    padding: 1rem;
-    background: #F9FAFB;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    font-weight: 600;
-}
-
-td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.85rem;
-}
-
-tr:hover {
-    background: rgba(0, 33, 102, 0.02);
-}
-
-/* Footer bar below the table — holds the record count and pagination buttons. */
-.table-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    background: #F9FAFB;
-    border-radius: 0 0 12px 12px;
-}
-
-.page-btn {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.78rem;
-    font-family: inherit;
-    font-weight: 500;
-    border: 1px solid var(--border);
-    background: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--navy-mid);
-    transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.page-btn:hover:not(:disabled) { 
-    background: var(--gold-pale);
-    border-color: var(--gold);
-}
-
-.page-btn:active:not(:disabled) {
-    transform: scale(0.98);
-}
-
-.page-btn:disabled { 
-    opacity: 0.4; 
-    cursor: not-allowed;
-}
-
-.page-btn:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
-}
-
-/* Monospace hash/ID display — used in table cells */
-.mono {
-    font-family: var(--font-mono);
-    background: #F1F5F9;
-    padding: 2px 6px;
+kbd {
+    background: var(--border);
+    border: 1px solid rgba(0,0,0,.15);
     border-radius: 4px;
-    font-size: 0.75rem;
-    color: var(--navy-mid);
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: .82em;
 }
 
-/* Document type badge — used in table cells */
-.badge-type {
-    background: var(--gold-pale);
-    color: #8a6a14;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    display: inline-block;
+code {
+    font-family: var(--font-mono);
+    font-size: .82em;
+    background: var(--border);
+    padding: 1px 4px;
+    border-radius: 3px;
 }
 
-/* Verify link in ledger table */
-.btn-outline {
-    display: inline-block;
-    padding: 0.25rem 0.65rem;
-    background: transparent;
-    color: var(--navy-mid);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-    cursor: pointer;
-}
+/* ── 9. Forms ────────────────────────────────────────────────── */
+.form-group  { margin-bottom: 1.1rem; }
+.form-label  { display: block; font-size: .84rem; font-weight: 600; margin-bottom: .4rem; color: var(--navy-mid); }
 
-.btn-outline:hover { 
-    background: var(--gold-pale);
-    border-color: var(--gold);
-}
-
-.btn-outline:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
-}
-
-
-/* ── 8. DASHBOARD STATS ──────────────────────────────────────────
-   Four stat cards in a responsive grid. */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.stat-card {
-    background: #F9FAFB;
-    border: 1px solid var(--border);
-    border-top: 4px solid var(--navy-mid);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 33, 102, 0.1);
-}
-
-.stat-card--gold { 
-    border-top-color: var(--gold);
-}
-
-.stat-value {
-    font-family: var(--font-serif);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--navy-mid);
-    line-height: 1.1;
-}
-
-.stat-value--green { 
-    color: var(--green);
-}
-
-.stat-label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    margin-top: 0.25rem;
-    font-weight: 600;
-}
-
-
-/* ── 9. CIVIC SECTION BLOCK ──────────────────────────────────────
-   Gold left-border block used for descriptive text inside panels.
-   The section ID (e.g. "01 — Upload") is a visual label only. */
-.civic-section {
-    border-left: 4px solid var(--gold);
-    padding: 0.75rem 1rem;
-    background: #FAFAF7;
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 1.25rem;
-}
-
-.civic-section-id {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--gold);
-    font-weight: 700;
-    display: block;
-    margin-bottom: 0.35rem;
-}
-
-.civic-body { 
-    font-size: 0.88rem; 
-    color: var(--muted);
-}
-
-.civic-body--sm { 
-    font-size: 0.83rem;
-}
-
-.civic-body p { 
-    margin: 0;
-}
-
-.civic-body em {
-    font-style: italic;
-    color: var(--navy-mid);
-    font-weight: 500;
-}
-
-
-/* ── 10. ALERTS ──────────────────────────────────────────────────
-   Warning and info banners in the Dashboard panel. */
-.alert-group { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 0.65rem; 
-    margin-top: 1.25rem;
-}
-
-.alert {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.83rem;
-    line-height: 1.5;
-    border-left: 4px solid;
-}
-
-.alert-warning {
-    background: #FFFBEB;
-    border-color: #FDE68A;
-    border-left-color: #F59E0B;
-    color: #92400E;
-}
-
-.alert-info {
-    background: var(--blue-pale);
-    border-color: #BFDBFE;
-    border-left-color: #3B82F6;
-    color: #1E3A8A;
-}
-
-
-/* ── 11. FORMS & INPUTS ──────────────────────────────────────────
-   Used in the upload form. */
-.form-group { 
-    margin-bottom: 1.25rem;
-}
-
-.form-label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--navy-mid);
-}
-
-.form-hint {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 0.4rem;
-}
-
-/* Shared input styles — select gets the same treatment as text inputs */
-.form-select,
-.form-input,
-.form-textarea {
+.form-select {
     width: 100%;
-    padding: 0.75rem;
+    padding: .7rem .85rem;
     border: 1.5px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-family: inherit;
-    font-size: 0.9rem;
-    box-sizing: border-box;
+    font-size: .9rem;
     background: #fff;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    transition: border-color var(--transition), box-shadow var(--transition);
 }
-
-.form-select:focus,
-.form-input:focus,
-.form-textarea:focus {
+.form-select:focus {
     outline: none;
     border-color: var(--navy-mid);
-    box-shadow: 0 0 0 3px rgba(0, 33, 102, 0.1);
+    box-shadow: 0 0 0 3px rgba(0,51,102,.1);
 }
 
-.form-textarea { 
-    min-height: 140px; 
-    resize: vertical;
-}
-
-/* Standard <select> dropdown arrow styling */
-select.form-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23003366'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 14l-7 7m0 0l-7-7m7 7V3'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1.2em;
-    padding-right: 2.5rem;
-}
-
-/* Datalist <input> dropdown styling (removes double-arrow conflict) */
-input.form-select {
-    background-image: none;
-    padding-right: 0.75rem;
-}
-
-/* Style the native WebKit datalist arrow to match the theme */
-input.form-select::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity var(--transition-fast);
-}
-
-input.form-select::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
-}
-
-/* ── 12. BUTTONS ───────────────────────────────────────────────── */
-
-/* Primary submit button — full width, navy */
-.btn-submit {
+/* ── 10. Buttons ─────────────────────────────────────────────── */
+.btn-primary {
     width: 100%;
-    padding: 0.85rem;
+    padding: .8rem;
     background: var(--navy-mid);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-family: inherit;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: .9rem;
     cursor: pointer;
-    margin-top: 0.5rem;
-    transition: background var(--transition-normal), transform var(--transition-fast);
+    margin-top: .4rem;
+    transition: background var(--transition);
 }
+.btn-primary:hover        { background: var(--navy); }
+.btn-primary:disabled     { opacity: .6; cursor: not-allowed; }
+.btn-primary:focus-visible{ outline: 2px solid var(--navy-mid); outline-offset: 2px; }
 
-.btn-submit:hover { 
-    background: var(--navy);
-    transform: translateY(-1px);
-}
-
-.btn-submit:active {
-    transform: translateY(0);
-}
-
-.btn-submit:disabled { 
-    opacity: 0.6; 
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-submit:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
-}
-
-
-/* ── 13. FILE DROP ZONE ──────────────────────────────────────────
-   The styled drop zone that sits over the hidden <input type="file">.
-   portal.js handles the click delegation and drag-and-drop logic. */
+/* ── 11. File drop ───────────────────────────────────────────── */
 .file-drop {
     border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 2rem;
+    border-radius: var(--radius);
+    padding: 1.75rem 1.5rem;
     text-align: center;
     cursor: pointer;
-    transition: border-color var(--transition-normal), background var(--transition-normal);
+    transition: border-color var(--transition), background var(--transition);
 }
-
-.file-drop:hover { 
+.file-drop:hover, .file-drop.dragover {
     border-color: var(--navy-mid);
+    background: rgba(0,51,102,.03);
 }
-
-.file-drop:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
-}
-
-/* dragover class added/removed by portal.js during drag events */
-.file-drop.dragover {
-    border-color: var(--navy-mid);
-    background: rgba(0, 33, 102, 0.02);
-    border-width: 2px;
-}
-
-.file-drop-icon { 
-    font-size: 2rem; 
-    margin-bottom: 0.5rem;
-}
-
-.file-drop-hint { 
-    margin-top: 0.2rem; 
-    font-size: 0.75rem; 
-    color: var(--muted);
-}
-
-/* Badge shown after a file is selected — displays filename + size */
+.file-drop:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
+.file-drop p             { margin: 0; font-size: .88rem; color: var(--muted); }
+.file-drop-icon          { font-size: 1.8rem; margin-bottom: .5rem; }
+.file-drop-hint          { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
 .file-name-badge {
     display: inline-block;
-    margin-top: 0.6rem;
+    margin-top: .5rem;
     padding: 3px 10px;
     background: var(--green-pale);
     color: var(--green);
     border-radius: 4px;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: .75rem;
     font-weight: 600;
 }
 
-
-/* ── 14. PROGRESS INDICATOR ──────────────────────────────────────
-   Shows animated steps while Flask processes the upload.
-   Hidden by default — portal.js shows it on form submit. */
-.progress-wrap { 
-    display: none; 
-    margin-top: 1.25rem;
-}
-
-/* Row of step pills */
-.progress-steps { 
-    display: flex; 
-    gap: 0.5rem; 
-    margin-bottom: 0.75rem;
-}
-
+/* ── 12. Progress ────────────────────────────────────────────── */
+.progress-wrap   { display: none; margin-top: 1.1rem; }
+.progress-steps  { display: flex; gap: .4rem; margin-bottom: .6rem; }
 .progress-step {
     flex: 1;
     text-align: center;
-    font-size: 0.72rem;
+    font-size: .7rem;
     font-weight: 600;
-    padding: 0.35rem 0;
-    border-radius: 6px;
+    padding: .3rem 0;
+    border-radius: var(--radius-sm);
     background: #F1F5F9;
     color: var(--muted);
     border: 1.5px solid var(--border);
-    transition: background var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal);
+    transition: background var(--transition), color var(--transition);
 }
+.progress-step.active { background: var(--navy-mid); color: #fff; border-color: var(--navy-mid); }
+.progress-step.done   { background: var(--green-pale); color: var(--green); border-color: var(--green-border); }
+.progress-bar-wrap    { height: 4px; background: #E5E7EB; border-radius: 99px; overflow: hidden; }
+.progress-bar         { height: 100%; width: 0; background: var(--navy-mid); border-radius: 99px; transition: width .4s ease; }
 
-/* Current step — highlighted in navy */
-.progress-step.active {
-    background: var(--navy-mid);
-    color: #fff;
-    border-color: var(--navy-mid);
-}
-
-/* Completed steps — green */
-.progress-step.done {
-    background: var(--green-pale);
-    color: var(--green);
-    border-color: #86EFAC;
-}
-
-/* Thin progress bar beneath the steps */
-.progress-bar-wrap {
-    height: 5px;
-    background: #E5E7EB;
-    border-radius: 99px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    background: var(--navy-mid);
-    border-radius: 99px;
-    transition: width var(--transition-smooth);
-}
-
-
-/* ── 15. RESULT BOX ──────────────────────────────────────────────
-   Shows after Flask responds — either success or error.
-   Hidden by default — portal.js populates and reveals it. */
-.result-box {
-    display: none;
-    margin-top: 1.25rem;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1.5px solid var(--border);
-    animation: slideIn 0.3s ease;
-}
-
-.result-success { 
-    border-color: #86EFAC;
-}
-
-.result-error { 
-    border-color: #FCA5A5;
-}
-
-.result-header { 
-    padding: 0.85rem 1rem; 
-    background: #F9FAFB; 
-    border-bottom: 1px solid var(--border);
-}
-
-.result-header h4 { 
-    margin: 0; 
-    font-size: 0.9rem; 
-    font-weight: 700; 
-    color: var(--navy-mid);
-}
-
-.result-success .result-header { 
-    background: var(--green-pale);
-}
-
-.result-error .result-header { 
-    background: var(--red-pale);
-}
-
-.result-body { 
-    padding: 1rem;
-}
-
-/* Key/value grid for success details (File, Type, Status) */
-.result-kv {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.4rem 1rem;
-    font-size: 0.83rem;
-    align-items: baseline;
-}
-
-.result-key { 
-    font-weight: 700; 
-    color: var(--muted); 
-    white-space: nowrap;
-}
-
-.result-val { 
-    color: var(--ink); 
-    word-break: break-all;
-}
-
-/* Download button — appears inside the result box on success.
-   Uses createObjectURL blob — not a server URL. */
+/* ── 13. Result box ──────────────────────────────────────────── */
+.result-box     { display: none; margin-top: 1.1rem; border-radius: var(--radius); overflow: hidden; border: 1.5px solid var(--border); }
+.result-success { border-color: var(--green-border); }
+.result-error   { border-color: var(--red-border); }
+.result-header  { padding: .75rem 1rem; background: #F9FAFB; border-bottom: 1px solid var(--border); }
+.result-success .result-header { background: var(--green-pale); }
+.result-error   .result-header { background: var(--red-pale); }
+.result-header h4 { margin: 0; font-size: .88rem; font-weight: 700; color: var(--navy-mid); }
+.result-body    { padding: .9rem 1rem; }
+.result-kv      { display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; font-size: .82rem; align-items: baseline; }
+.result-key     { font-weight: 700; color: var(--muted); white-space: nowrap; }
+.result-val     { color: var(--ink); word-break: break-all; }
 .download-btn {
     display: inline-block;
-    margin-top: 0.85rem;
-    padding: 0.55rem 1.1rem;
+    margin-top: .75rem;
+    padding: .5rem 1rem;
     background: var(--navy-mid);
     color: #fff;
-    border-radius: 8px;
-    border: none;
+    border-radius: var(--radius-sm);
     text-decoration: none;
-    font-size: 0.83rem;
+    font-size: .82rem;
     font-weight: 600;
+    transition: background var(--transition);
+}
+.download-btn:hover { background: var(--navy); }
+
+/* ── 14. Tables ──────────────────────────────────────────────── */
+table            { width: 100%; border-collapse: collapse; }
+th {
+    text-align: left;
+    padding: .85rem 1rem;
+    background: #F9FAFB;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+}
+td               { padding: .85rem 1rem; border-bottom: 1px solid var(--border); font-size: .84rem; }
+tr:hover         { background: rgba(0,51,102,.02); }
+.ctrl-no         { font-family: var(--font-mono); font-size: .78rem; color: var(--navy-mid); font-weight: 600; }
+.mono {
+    font-family: var(--font-mono);
+    background: #F1F5F9;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: .73rem;
+    color: var(--navy-mid);
+}
+.badge-type {
+    background: var(--gold-pale);
+    color: var(--gold-dark);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: .68rem;
+    font-weight: 700;
+    display: inline-block;
+}
+.badge-ok {
+    background: var(--green-pale);
+    color: var(--green);
+    border: 1px solid var(--green-border);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: .68rem;
+    font-weight: 700;
+}
+.btn-outline {
+    display: inline-block;
+    padding: .2rem .6rem;
+    background: transparent;
+    color: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: .73rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition), border-color var(--transition);
+}
+.btn-outline:hover { background: var(--gold-pale); border-color: var(--gold); }
+
+.table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .65rem 1rem;
+    font-size: .78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: #F9FAFB;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.page-btn {
+    padding: .3rem .65rem;
+    font-size: .75rem;
     font-family: inherit;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background var(--transition-normal);
+    color: var(--navy-mid);
+    transition: background var(--transition);
 }
+.page-btn:hover:not(:disabled) { background: var(--gold-pale); border-color: var(--gold); }
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.page-btn:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
 
-.download-btn:hover { 
-    background: var(--navy);
+/* ── 15. Stats ───────────────────────────────────────────────── */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: .85rem;
+    margin-bottom: 1.1rem;
 }
-
-.download-btn:focus-visible {
-    outline: 2px solid var(--navy-mid);
-    outline-offset: 2px;
+.stat-card {
+    background: #F9FAFB;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--navy-mid);
+    border-radius: var(--radius);
+    padding: .9rem 1.1rem;
 }
+.stat-card--gold { border-top-color: var(--gold); }
+.stat-value  { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; color: var(--navy-mid); line-height: 1.1; }
+.stat-label  { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: .2rem; font-weight: 600; }
 
+/* ── 16. Alerts ──────────────────────────────────────────────── */
+.alert-group { display: flex; flex-direction: column; gap: .55rem; }
+.alert       { padding: .7rem 1rem; border-radius: var(--radius-sm); font-size: .82rem; line-height: 1.5; border-left: 4px solid; }
+.alert-warning { background: var(--amber-pale); border-color: #F59E0B; color: var(--amber); }
+.alert-info    { background: var(--blue-pale);  border-color: #3B82F6; color: #1E3A8A; }
 
-/* ── 16. SPINNER ─────────────────────────────────────────────────
-   CSS-only loading animation — no JS, no images.
-   Used in the ledger loading state. */
-@keyframes spin { 
-    to { transform: rotate(360deg); } 
+/* ── 17. Hash chain view ─────────────────────────────────────── */
+.chain-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: .75rem 0;
+    border-bottom: 1px solid var(--border);
 }
+.chain-entry:last-child { border-bottom: none; }
+.chain-seq {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--gold-dark);
+    background: var(--gold-pale);
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 3rem;
+    text-align: center;
+}
+.chain-meta  { flex: 1; min-width: 0; }
+.chain-hashes{ display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .2rem; }
+.chain-arrow { color: var(--muted); font-size: .9rem; }
+.chain-hash-val { color: var(--green); }
+.chain-status{ flex-shrink: 0; }
 
+/* ── 18. Spinner ─────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
-    width: 24px;
-    height: 24px;
+    width: 22px; height: 22px;
     border: 3px solid var(--border);
     border-top-color: var(--navy-mid);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin .75s linear infinite;
     display: inline-block;
     vertical-align: middle;
 }
 
-
-/* ── 17. FOOTER ──────────────────────────────────────────────────
-   Simple text footer — identity and attribution only. */
+/* ── 19. Footer ──────────────────────────────────────────────── */
 .site-footer {
     text-align: center;
-    padding: 1.5rem;
-    font-size: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    font-size: .72rem;
     color: var(--muted);
     border-top: 1px solid var(--border);
     margin-top: 2rem;
-    background: #FAFAF7;
+    background: var(--white);
 }
 
-
-/* ── 18. MEDIA QUERIES (RESPONSIVE) ──────────────────────────────
-   Mobile-first: base styles are mobile, media queries add desktop. */
-
-/* Tablet: 768px+ */
+/* ── 20. Responsive ──────────────────────────────────────────── */
 @media (max-width: 1024px) {
-    .layout {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 0.5rem;
-    }
-
-    .sidebar-section {
-        grid-column: 1 / -1;
-    }
+    .layout  { flex-direction: column; }
+    .sidebar { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .4rem; }
+    .sidebar-section { grid-column: 1/-1; margin: .75rem 0 .25rem .5rem; }
 }
 
-/* Mobile: 480px and down */
 @media (max-width: 640px) {
-    .topbar-inner {
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .brand h1 {
-        font-size: 0.9rem;
-    }
-
-    .brand p {
-        font-size: 0.6rem;
-    }
-
-    .topbar-right {
-        font-size: 0.75rem;
-        gap: 0.3rem;
-    }
-
-    .logout-link {
-        padding: 3px 8px;
-        font-size: 0.65rem;
-    }
-
-    .layout {
-        margin: 1rem;
-        gap: 1rem;
-        padding: 0;
-    }
-
-    .sidebar {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        order: 2;
-    }
-
-    .main-content {
-        order: 1;
-    }
-
-    .panel-header {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 1rem;
-    }
-
-    .panel-body {
-        padding: 1rem;
-    }
-
-    .stats-row {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-    }
-
-    .stat-value {
-        font-size: 1.25rem;
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .progress-steps {
-        gap: 0.25rem;
-    }
-
-    .progress-step {
-        font-size: 0.65rem;
-        padding: 0.25rem 0;
-    }
-
-    .table-footer {
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: flex-start;
-    }
-
-    .nav-item {
-        padding: 0.75rem 0.75rem;
-    }
-
-    .nav-icon {
-        margin-right: 8px;
-        font-size: 1rem;
-    }
+    .topbar-inner { flex-wrap: wrap; gap: .75rem; }
+    .brand h1     { font-size: .88rem; }
+    .layout       { margin: .75rem; padding: 0; gap: .75rem; }
+    .sidebar      { display: flex; flex-direction: column; }
+    .main-content { order: 0; }
+    .panel-header { padding: 1rem; }
+    .panel-body   { padding: 1rem; }
+    .stats-row    { grid-template-columns: repeat(2, 1fr); }
+    .stat-value   { font-size: 1.2rem; }
+    .vault-strip  { gap: .5rem; }
 }
 
-/* Print styles */
 @media print {
-    .topbar,
-    .sidebar,
-    .logout-link,
-    .btn-submit,
-    .page-btn {
-        display: none;
-    }
-
-    body {
-        background: #fff;
-    }
-
-    .panel {
-        box-shadow: none;
-        border: 1px solid #ccc;
-        page-break-inside: avoid;
-    }
+    .topbar, .sidebar, .btn-lock-top, .btn-primary, .page-btn, .vault-strip { display: none; }
+    body { background: #fff; }
+    .panel { box-shadow: none; border: 1px solid #ccc; }
 }
 
-/* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
     }
 }
