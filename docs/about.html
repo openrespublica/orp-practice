@@ -20,10 +20,10 @@
             </div>
         </div>
         <nav class="topnav" aria-label="Site navigation">
-            <a href="index.html" class="nav-link">Home</a>
-            <a href="verify.html" class="nav-link">Verify</a>
+            <a href="index.html"   class="nav-link">Home</a>
+            <a href="verify.html"  class="nav-link">Verify</a>
             <a href="records.html" class="nav-link">Ledger</a>
-            <a href="about.html" class="nav-link active" aria-current="page">About</a>
+            <a href="about.html"   class="nav-link active" aria-current="page">About</a>
         </nav>
     </div>
 </header>
@@ -34,65 +34,37 @@
         <p class="about-lead">
             TruthChain is an open-source cryptographic document anchoring system
             built for government offices and institutions that need tamper-evident,
-            publicly verifiable records.
+            publicly verifiable records without relying on any centralised database.
         </p>
 
         <h2>How it works</h2>
         <ol class="how-list">
-            <li>
-                <strong>Document received</strong> — An operator submits a PDF
-                through the secure operator portal.
-            </li>
-            <li>
-                <strong>SHA-256 fingerprinting</strong> — A unique 256-bit hash is
-                computed from the exact bytes of the document.
-            </li>
-            <li>
-                <strong>Hash chain entry</strong> — The hash is linked to the previous
-                record's chain hash, creating a tamper-evident sequence.
-            </li>
-            <li>
-                <strong>GPG signing</strong> — The full audit record is digitally
-                signed with the operator's Ed25519 key.
-            </li>
-            <li>
-                <strong>Encrypted vault storage</strong> — The signed JSON record is
-                written to a LUKS2 AES-XTS-512 encrypted drive, locked with a
-                physical hardware key.
-            </li>
-            <li>
-                <strong>PDF stamping</strong> — The original PDF receives a footer
-                stamp containing the control number, sequence, hash, chain hash,
-                timestamp, and a QR code linking to this portal.
-            </li>
-            <li>
-                <strong>Public ledger sync</strong> — The signed record (containing
-                only the hash, never the document content) is pushed to this public
-                GitHub repository within 60–90 seconds.
-            </li>
+            <li><strong>Document received</strong> — An operator submits a PDF through the secure operator portal.</li>
+            <li><strong>SHA-256 fingerprinting</strong> — A unique 256-bit hash is computed from the exact bytes of the document.</li>
+            <li><strong>Hash chain entry</strong> — The hash is linked to the previous record's chain hash, creating a tamper-evident sequence.</li>
+            <li><strong>GPG signing</strong> — The full audit record is digitally signed with the operator's Ed25519 key.</li>
+            <li><strong>Encrypted vault storage</strong> — The signed JSON record is written to a LUKS2 AES-XTS-512 encrypted drive, locked with a physical hardware key.</li>
+            <li><strong>PDF stamping</strong> — The original PDF receives a footer stamp with control number, sequence, hash, chain hash, timestamp, and QR code.</li>
+            <li><strong>Public ledger sync</strong> — The signed record (hash only — never the document) is pushed to this public GitHub repository within 60–90 seconds.</li>
         </ol>
 
         <h2>Security properties</h2>
         <div class="security-grid">
             <div class="sec-item">
                 <h4>Tamper evidence</h4>
-                <p>Any modification to a published record breaks all subsequent
-                chain hashes. Forgery is detectable by anyone.</p>
+                <p>Any modification to a published record breaks all subsequent chain hashes. Forgery is detectable by anyone.</p>
             </div>
             <div class="sec-item">
                 <h4>Non-repudiation</h4>
-                <p>Every record carries an Ed25519 GPG signature. The operator
-                cannot credibly deny having issued the record.</p>
+                <p>Every record carries an Ed25519 GPG signature. The operator cannot credibly deny having issued the record.</p>
             </div>
             <div class="sec-item">
                 <h4>Privacy by design</h4>
-                <p>Only the hash is published. The document itself never leaves the
-                encrypted vault, complying with RA 10173.</p>
+                <p>Only the hash is published. The document itself never leaves the encrypted vault, complying with RA 10173.</p>
             </div>
             <div class="sec-item">
                 <h4>Offline verifiable</h4>
-                <p>Anyone can clone this repository and verify records without
-                trusting any third-party service.</p>
+                <p>Anyone can clone this repository and verify records without trusting any third-party service.</p>
             </div>
         </div>
 
@@ -104,7 +76,7 @@
                 <tr><th>Fingerprinting</th><td>SHA-256</td></tr>
                 <tr><th>Chain algorithm</th><td>SHA-256(seq | hash | prev_chain | timestamp)</td></tr>
                 <tr><th>Transport security</th><td>SSH Ed25519 (persistent, 30-day)</td></tr>
-                <tr><th>Engine</th><td>Python / Flask / Gunicorn</td></tr>
+                <tr><th>Engine</th><td>Python / Flask / Gunicorn / Alpine Linux</td></tr>
                 <tr><th>Public ledger</th><td>GitHub Pages (append-only by policy)</td></tr>
                 <tr><th>Compliance</th><td>Republic Act 10173 (Data Privacy Act of 2012)</td></tr>
             </tbody>
@@ -120,7 +92,7 @@
 </main>
 
 <footer class="site-footer">
-    <div class="container footer-inner">
+    <div class="footer-inner">
         <span data-config="lgu.name">OpenResPublica</span> &nbsp;·&nbsp;
         TruthChain v2.0 &nbsp;·&nbsp;
         Ed25519 / LUKS2 / SHA-256 Hash Chain &nbsp;·&nbsp;

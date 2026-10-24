@@ -20,10 +20,10 @@
             </div>
         </div>
         <nav class="topnav" aria-label="Site navigation">
-            <a href="index.html" class="nav-link active" aria-current="page">Home</a>
-            <a href="verify.html" class="nav-link">Verify</a>
+            <a href="index.html"   class="nav-link active" aria-current="page">Home</a>
+            <a href="verify.html"  class="nav-link">Verify</a>
             <a href="records.html" class="nav-link">Ledger</a>
-            <a href="about.html" class="nav-link">About</a>
+            <a href="about.html"   class="nav-link">About</a>
         </nav>
     </div>
 </header>
@@ -32,16 +32,14 @@
     <section class="hero">
         <div class="hero-inner">
             <div class="hero-badge">🔏 Cryptographically Secured</div>
-            <h1 class="hero-title">
-                Document<br>Verification<br>Ledger
-            </h1>
+            <h1 class="hero-title">Document<br>Verification<br>Ledger</h1>
             <p class="hero-sub">
                 Every document issued through this system is SHA-256 fingerprinted,
                 GPG-signed, stored in an encrypted vault, and published here —
                 creating a tamper-evident public record anchored to a hash chain.
             </p>
             <div class="hero-actions">
-                <a href="verify.html" class="btn-hero-primary">🔍 Verify a document</a>
+                <a href="verify.html"  class="btn-hero-primary">🔍 Verify a document</a>
                 <a href="records.html" class="btn-hero-outline">📋 Browse ledger</a>
             </div>
         </div>
@@ -49,17 +47,17 @@
             <div class="chain-preview">
                 <div class="chain-block">
                     <div class="cb-seq">#N</div>
-                    <div class="cb-hash">SHA-256…</div>
+                    <div class="cb-hash">a3f8…4c2d</div>
                     <div class="cb-arrow">↓</div>
                 </div>
                 <div class="chain-block chain-block--active">
                     <div class="cb-seq">#N+1</div>
-                    <div class="cb-hash">SHA-256…</div>
+                    <div class="cb-hash">9e1b…7fa0</div>
                     <div class="cb-arrow">↓</div>
                 </div>
                 <div class="chain-block">
                     <div class="cb-seq">#N+2</div>
-                    <div class="cb-hash">SHA-256…</div>
+                    <div class="cb-hash">c04d…2e8b</div>
                 </div>
             </div>
         </div>
@@ -69,44 +67,44 @@
         <div class="feature-card">
             <div class="feature-icon">🔐</div>
             <h3>AES-XTS-512 Encrypted Vault</h3>
-            <p>All records are stored in a LUKS2 encrypted drive with Argon2id key derivation. Physical possession of the hardware key is required to decrypt.</p>
+            <p>Records are stored in a LUKS2 encrypted drive with Argon2id key derivation. Physical possession of the hardware key is required to decrypt.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🔗</div>
             <h3>SHA-256 Hash Chain</h3>
-            <p>Each record links cryptographically to the previous one. Any tampering with a record breaks all subsequent chain hashes — making falsification detectable.</p>
+            <p>Each record links cryptographically to the previous one. Any tampering breaks all subsequent chain hashes — making falsification detectable.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">✍️</div>
             <h3>Ed25519 GPG Signing</h3>
-            <p>Every record is digitally signed with a 30-day rotating Ed25519 key. The signature proves the record was created by the authorised operator.</p>
+            <p>Every record is digitally signed with a 30-day rotating Ed25519 key. The signature proves it was created by the authorised operator.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🌐</div>
             <h3>Public GitHub Ledger</h3>
-            <p>Signed JSON records are pushed to this public repository automatically. Anyone can verify a document's authenticity without contacting the issuing office.</p>
+            <p>Signed JSON records are pushed to this public repository automatically. Anyone can verify a document's authenticity without contacting the office.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">📄</div>
             <h3>Stamped PDF Archive</h3>
-            <p>Every issued document carries a footer stamp with a control number, sequence, hash, chain hash, timestamp, and QR code linking to this verification portal.</p>
+            <p>Every issued document carries a footer stamp with control number, sequence, hash, chain hash, timestamp, and QR code linking here.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">⚖️</div>
             <h3>RA 10173 Compliant</h3>
-            <p>Data handling follows the Data Privacy Act of 2012. Only the document fingerprint (hash) is published — the document itself stays encrypted in the vault.</p>
+            <p>Only the document fingerprint is published — the document itself stays encrypted in the vault. Compliant with the Data Privacy Act of 2012.</p>
         </div>
     </section>
 
     <section class="cta-strip">
         <div class="container">
-            <h2>Do you have a document to verify?</h2>
-            <p>Enter the SHA-256 fingerprint from the document's stamp, or scan the QR code.</p>
+            <h2>Have a document to verify?</h2>
+            <p>Enter the SHA-256 fingerprint from the stamp, or scan the QR code.</p>
             <a href="verify.html" class="btn-hero-primary">Verify now →</a>
         </div>
     </section>
 
-    <section class="stats-strip container" id="statsStrip">
+    <section class="stats-strip container">
         <div class="stat-block">
             <div class="stat-n" id="statTotal">—</div>
             <div class="stat-l">Documents anchored</div>
@@ -127,7 +125,7 @@
 </main>
 
 <footer class="site-footer">
-    <div class="container footer-inner">
+    <div class="footer-inner">
         <span data-config="lgu.name">OpenResPublica</span> &nbsp;·&nbsp;
         TruthChain v2.0 &nbsp;·&nbsp;
         Ed25519 / LUKS2 / SHA-256 Hash Chain &nbsp;·&nbsp;
@@ -137,14 +135,17 @@
 
 <script src="assets/config-loader.js"></script>
 <script>
-document.addEventListener('orp:config', async ({ detail: config }) => {
+document.addEventListener('orp:config', async ({ detail: cfg }) => {
     try {
-        const res  = await fetch(config.github.manifest_url + '?t=' + Date.now());
+        const res  = await fetch(
+            cfg.github.manifest_url + '?t=' + Date.now(),
+            { signal: AbortSignal.timeout(10000) }
+        );
         if (!res.ok) return;
         const data = await res.json();
-        const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-        el('statTotal',  data.length);
-        el('statLatest', (data[0]?.timestamp || '—').split(' ')[0]);
+        const set  = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        set('statTotal',  data.length);
+        set('statLatest', (data[0]?.timestamp || '—').split(' ')[0]);
     } catch {}
 });
 </script>

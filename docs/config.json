@@ -12,9 +12,10 @@
   "github": {
     "owner": "openrespublica",
     "repo": "orp-practice",
-    "portal_url": "https://openrespublica.github.io/orp-practice/verify.html",
-    "ledger_url": "https://openrespublica.github.io/orp-practice/records.html",
-    "manifest_url": "https://openrespublica.github.io/orp-practice/docs/records/manifest.json"
+    "base_url": "https://openrespublica.github.io/orp-practice",
+    "manifest_url": "https://openrespublica.github.io/orp-practice/records/manifest.json",
+    "records_url":  "https://openrespublica.github.io/orp-practice/records/",
+    "portal_url":   "https://openrespublica.github.io/orp-practice/verify.html"
   },
   "engine": {
     "version": "2.0.0",

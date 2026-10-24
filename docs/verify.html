@@ -20,10 +20,10 @@
             </div>
         </div>
         <nav class="topnav" aria-label="Site navigation">
-            <a href="index.html" class="nav-link">Home</a>
-            <a href="verify.html" class="nav-link active" aria-current="page">Verify</a>
+            <a href="index.html"   class="nav-link">Home</a>
+            <a href="verify.html"  class="nav-link active" aria-current="page">Verify</a>
             <a href="records.html" class="nav-link">Ledger</a>
-            <a href="about.html" class="nav-link">About</a>
+            <a href="about.html"   class="nav-link">About</a>
         </nav>
     </div>
 </header>
@@ -44,7 +44,7 @@
                 <label class="sr-only" for="hashInput">SHA-256 fingerprint</label>
                 <input type="text" id="hashInput" name="hash"
                        class="hash-input"
-                       placeholder="Enter SHA-256 fingerprint (64 hex characters)…"
+                       placeholder="e.g. aac47b879896c686340e6ec15cdcb61aa771aa06…"
                        maxlength="64"
                        autocomplete="off"
                        autocorrect="off"
@@ -60,34 +60,36 @@
             </button>
         </form>
 
-        <div id="verifyStatus" role="status" aria-live="polite" style="display:none">
+        <div id="verifyStatus" style="display:none">
             <div class="verify-loading">
                 <div class="spinner"></div>
                 <span>Querying ledger…</span>
             </div>
         </div>
 
-        <div id="resultFound" class="result-card result-found" role="alert" style="display:none">
+        <div id="resultFound" class="result-card result-found"
+             role="alert" aria-live="polite" style="display:none">
             <div class="result-badge result-badge--ok">✓ Authenticated</div>
             <h2>Document Verified</h2>
             <p class="result-intro">
                 This document's fingerprint is registered on the
                 OpenResPublica TruthChain public ledger.
             </p>
-            <div class="result-kv" id="resultDetails"></div>
+            <dl class="result-kv" id="resultDetails"></dl>
             <div class="result-chain" id="resultChain"></div>
-            <div class="result-sig" id="resultSig"></div>
+            <div id="resultSig"></div>
         </div>
 
-        <div id="resultNotFound" class="result-card result-notfound" role="alert" style="display:none">
+        <div id="resultNotFound" class="result-card result-notfound"
+             role="alert" aria-live="polite" style="display:none">
             <div class="result-badge result-badge--err">✕ Not Found</div>
             <h2>Record Not Found</h2>
-            <p>No record matches fingerprint:</p>
+            <p>No record matches this fingerprint:</p>
             <code class="hash-display" id="notFoundHash"></code>
             <div class="notfound-hints">
                 <p><strong>Possible reasons:</strong></p>
                 <ul>
-                    <li>The document was issued within the last 60 seconds —
+                    <li>The document was issued within the last 60–90 seconds —
                         allow time for ledger synchronisation and try again.</li>
                     <li>The hash was entered incorrectly — check for missing
                         or extra characters.</li>
@@ -99,7 +101,7 @@
 </main>
 
 <footer class="site-footer">
-    <div class="container footer-inner">
+    <div class="footer-inner">
         <span data-config="lgu.name">OpenResPublica</span> &nbsp;·&nbsp;
         TruthChain v2.0 &nbsp;·&nbsp;
         Ed25519 / LUKS2 / SHA-256 Hash Chain &nbsp;·&nbsp;
