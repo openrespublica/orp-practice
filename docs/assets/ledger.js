@@ -1,113 +1,134 @@
-// ledger.js — TruthChain Public Ledger
-'use strict';
+/**
+ * ledger.js — Public Audit Ledger Logic
+ * OpenResPublica TruthChain · records.html
+ */
 
-(function () {
+let ledgerData   = [];
+let filteredData = [];
+let currentPage  = 1;
+const PAGE_SIZE  = 15;
 
-const PAGE = 20;
-let allRecords = [];
-let filtered   = [];
-let page       = 1;
+document.addEventListener('DOMContentLoaded', loadLedger);
 
-function esc(str) {
-    const d = document.createElement('div');
-    d.textContent = String(str ?? '');
-    return d.innerHTML;
+/**
+ * HTML-escape to prevent XSS from ledger data injected into innerHTML.
+ */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-function getManifestUrl(config) {
-    return config?.github?.manifest_url
-        || 'https://openrespublica.github.io/orp-practice/docs/records/manifest.json';
-}
+async function loadLedger() {
+  const tbody = document.getElementById('ledger-body');
 
-async function loadLedger(config) {
-    try {
-        const res = await fetch(getManifestUrl(config) + '?t=' + Date.now(),
-                                { signal: AbortSignal.timeout(20000) });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        allRecords = await res.json();
-        filtered   = allRecords;
-        page       = 1;
-        renderTable();
-        initSearch();
-    } catch (err) {
-        document.getElementById('ledgerBody').innerHTML =
-            `<tr><td colspan="6" style="text-align:center;padding:3rem;color:#6B7280">
-                Could not load ledger. Check your connection.<br>
-                <small style="font-family:monospace">${esc(err.message)}</small>
-            </td></tr>`;
+  try {
+    // Cache-bust so citizens always see the current ledger state.
+    const response = await fetch(`records/manifest.json?t=${Date.now()}`);
+    if (!response.ok) throw new Error('Manifest unavailable');
+
+    // manifest.json is newest-first — main.py uses records.insert(0, record).
+    ledgerData   = await response.json();
+    filteredData = ledgerData;
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+    const statTotal  = document.getElementById('statTotal');
+    const statLatest = document.getElementById('statLatest');
+    const statYear   = document.getElementById('statYear');
+
+    if (statTotal)  statTotal.textContent  = ledgerData.length;
+    if (statYear)   statYear.textContent   = new Date().getFullYear();
+
+    if (statLatest && ledgerData.length > 0) {
+      const ts = ledgerData[0]?.timestamp || '';
+      statLatest.textContent = ts ? ts.split(' ')[0] : '—';
     }
+
+    renderPage();
+
+  } catch {
+    if (tbody) {
+      tbody.innerHTML =
+        '<tr><td colspan="5"><div class="table-msg">' +
+        'No records found in the public ledger yet.' +
+        '</div></td></tr>';
+    }
+    setFooter('0 records', true, true);
+  }
 }
 
-function renderTable() {
-    const start = (page - 1) * PAGE;
-    const end   = Math.min(start + PAGE, filtered.length);
-    const rows  = filtered.slice(start, end);
+function renderPage() {
+  const tbody = document.getElementById('ledger-body');
+  if (!tbody) return;
 
-    document.getElementById('ledgerBody').innerHTML = rows.length
-        ? rows.map(r => `
-            <tr>
-                <td><span class="chain-seq-badge">#${esc(String(r.sequence ?? '—'))}</span></td>
-                <td><span class="ctrl-no">${esc(r.control_number ?? '—')}</span></td>
-                <td><span class="badge-type">${esc(r.document_type ?? 'GENERAL')}</span></td>
-                <td class="ts-cell">${esc((r.timestamp ?? '').split(' ')[0])}</td>
-                <td><span class="hash-short" title="${esc(r.sha256_hash ?? '')}">
-                    ${esc((r.sha256_hash ?? '').slice(0,16))}…</span></td>
-                <td style="text-align:center">
-                    <a href="verify.html?hash=${encodeURIComponent(r.sha256_hash ?? '')}"
-                       class="btn-verify-link">Verify</a>
-                </td>
-            </tr>`)
-            .join('')
-        : '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#6B7280">No records found.</td></tr>';
+  const total = filteredData.length;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end   = Math.min(start + PAGE_SIZE, total);
+  const slice = filteredData.slice(start, end);
 
-    const count   = document.getElementById('ledgerCount');
-    const info    = document.getElementById('pageInfo');
-    const prevBtn = document.getElementById('lPrev');
-    const nextBtn = document.getElementById('lNext');
+  if (slice.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="5"><div class="table-msg">' +
+      (filteredData.length === 0 && ledgerData.length > 0
+        ? 'No matching records found.'
+        : 'No records in the ledger yet.') +
+      '</div></td></tr>';
+    setFooter('0 records', true, true);
+    return;
+  }
 
-    if (count) count.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
-    if (info)  info.textContent  = filtered.length
-        ? `Showing ${start + 1}–${end} of ${filtered.length}`
-        : 'No results';
-    if (prevBtn) prevBtn.disabled = page === 1;
-    if (nextBtn) nextBtn.disabled = end >= filtered.length;
+  tbody.innerHTML = slice.map(item => `
+    <tr>
+      <td><span class="ctrl-num">${escapeHtml(item.control_number) || '—'}</span></td>
+      <td><span class="date-cell">${escapeHtml(formatDate(item.timestamp))}</span></td>
+      <td><span class="badge-type">${escapeHtml(item.document_type) || 'GENERAL'}</span></td>
+      <td><span class="hash-cell">${escapeHtml((item.sha256_hash || '').substring(0, 16))}…</span></td>
+      <td class="action-cell">
+        <a href="verify.html?hash=${encodeURIComponent(item.sha256_hash || '')}" class="verify-link">Verify</a>
+      </td>
+    </tr>
+  `).join('');
+
+  setFooter(
+    `Showing ${start + 1}–${end} of ${total} record${total !== 1 ? 's' : ''}`,
+    currentPage === 1,
+    end >= total
+  );
 }
 
-function initSearch() {
-    const box = document.getElementById('searchBox');
-    if (!box) return;
-    box.addEventListener('input', () => {
-        const q = box.value.trim().toLowerCase();
-        filtered = q
-            ? allRecords.filter(r =>
-                (r.control_number ?? '').toLowerCase().includes(q) ||
-                (r.document_type  ?? '').toLowerCase().includes(q) ||
-                (r.sha256_hash    ?? '').toLowerCase().includes(q) ||
-                (r.timestamp      ?? '').toLowerCase().includes(q))
-            : allRecords;
-        page = 1;
-        renderTable();
-    });
+function setFooter(text, prevDisabled, nextDisabled) {
+  const countEl = document.getElementById('recordCount');
+  const prevBtn  = document.getElementById('prevBtn');
+  const nextBtn  = document.getElementById('nextBtn');
+  if (countEl) countEl.textContent = text;
+  if (prevBtn)  prevBtn.disabled   = prevDisabled;
+  if (nextBtn)  nextBtn.disabled   = nextDisabled;
 }
 
-function initPagination() {
-    document.getElementById('lPrev')?.addEventListener('click', () => {
-        if (page > 1) { page--; renderTable();
-            document.querySelector('table')?.scrollIntoView({ behavior: 'smooth' }); }
-    });
-    document.getElementById('lNext')?.addEventListener('click', () => {
-        if ((page * PAGE) < filtered.length) { page++;  renderTable();
-            document.querySelector('table')?.scrollIntoView({ behavior: 'smooth' }); }
-    });
+function changePage(dir) {
+  const maxPage = Math.ceil(filteredData.length / PAGE_SIZE);
+  currentPage   = Math.max(1, Math.min(currentPage + dir, maxPage));
+  renderPage();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-initPagination();
-
-if (window.__orp_config) {
-    loadLedger(window.__orp_config);
-} else {
-    document.addEventListener('orp:config', ({ detail }) => loadLedger(detail));
-    setTimeout(() => { if (!window.__orp_config) loadLedger(null); }, 3000);
+function searchLedger() {
+  const term = (document.getElementById('search')?.value || '').toLowerCase().trim();
+  filteredData = term
+    ? ledgerData.filter(item =>
+        (item.control_number || '').toLowerCase().includes(term) ||
+        (item.document_type  || '').toLowerCase().includes(term)
+      )
+    : ledgerData;
+  currentPage = 1;
+  renderPage();
 }
 
-})();
+function formatDate(ts) {
+  if (!ts) return '—';
+  return ts.split(' ')[0] || '—';
+}

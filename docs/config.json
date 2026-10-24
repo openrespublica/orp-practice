@@ -6,23 +6,14 @@
     "timezone": "Asia/Manila"
   },
   "portal": {
-    "title": "TruthChain Verification Portal",
-    "subtitle": "OpenResPublica · Cryptographic Document Audit Ledger"
+    "title": "TruthChain Verification",
+    "subtitle": "LGU OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS · Cryptographic Document Audit Portal"
   },
   "github": {
     "owner": "openrespublica",
-    "repo": "orp-practice",
-    "portal_url": "https://openrespublica.github.io/orp-practice/verify.html",
-    "ledger_url": "https://openrespublica.github.io/orp-practice/records.html",
-    "manifest_url": "https://openrespublica.github.io/orp-practice/docs/records/manifest.json"
+    "repo": "openrespublica.github.io",
+    "portal_url": "https://openrespublica.github.io/openrespublica.github.io/verify.html"
   },
-  "engine": {
-    "version": "2.0.0",
-    "integrity": "LUKS2/AES-XTS-512/Argon2id",
-    "signing": "Ed25519/GPG",
-    "chain": "SHA-256 Hash Chain",
-    "compliance": "Republic Act 10173"
-  },
-  "generated": "2026-10-24T00:00:00+08:00",
-  "version": "2.0.0"
+  "generated": "2026-08-24T05:22:58+08:00",
+  "version": "1.0.0"
 }

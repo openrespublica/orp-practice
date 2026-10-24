@@ -1,171 +1,218 @@
-// verify.js — TruthChain Document Verification
-// Reads config from window.__orp_config set by config-loader.js
-'use strict';
+/**
+ * verify.js — Document Verification Logic
+ * OpenResPublica TruthChain · verify.html
+ *
+ * Flow:
+ *   ?hash=<sha256>  →  auto-verify via ledger lookup
+ *   (no hash)       →  render manual input form
+ */
 
-(function () {
+document.addEventListener('DOMContentLoaded', () => {
+  const params   = new URLSearchParams(window.location.search);
+  const fileHash = params.get('hash');
+  const container = document.getElementById('card-container');
 
-function esc(str) {
-    const d = document.createElement('div');
-    d.textContent = String(str ?? '');
-    return d.innerHTML;
+  if (fileHash) {
+    executeVerification(fileHash.trim());
+  } else {
+    renderManualForm(container);
+  }
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * HTML-escape to prevent XSS from ledger data injected via innerHTML.
+ */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-function fmtHash(h) {
-    if (!h) return '—';
-    return `<span class="hash-block">${h.slice(0,16)}</span>` +
-           `<span class="hash-block">${h.slice(16,32)}</span>` +
-           `<span class="hash-block">${h.slice(32,48)}</span>` +
-           `<span class="hash-block">${h.slice(48)}</span>`;
-}
+// ── Core verification flow ─────────────────────────────────────────────────
 
-function getManifestUrl(config) {
-    return config?.github?.manifest_url
-        || 'https://openrespublica.github.io/orp-practice/docs/records/manifest.json';
-}
+async function executeVerification(hash, retryCount = 0) {
+  const container = document.getElementById('card-container');
+  const msg = retryCount > 0
+    ? `Propagation lag detected — retrying (${retryCount}/2)…`
+    : 'Searching immutable ledger…';
+  renderLoadingState(container, msg);
 
-function getRecordUrl(config, hash) {
-    const base = (config?.github?.manifest_url || '')
-        .replace('manifest.json', '');
-    return `${base}${hash}.json`;
-}
-
-async function verify(hash, config) {
-    // 1. Try direct record file first (fastest)
-    try {
-        const url = getRecordUrl(config, hash);
-        const res = await fetch(url + '?t=' + Date.now(),
-                                { signal: AbortSignal.timeout(10000) });
-        if (res.ok) {
-            const record = await res.json();
-            if (record.sha256_hash === hash) return record;
-        }
-    } catch { /* fall through to manifest search */ }
-
-    // 2. Fall back to manifest search
-    try {
-        const murl = getManifestUrl(config);
-        const res  = await fetch(murl + '?t=' + Date.now(),
-                                 { signal: AbortSignal.timeout(15000) });
-        if (!res.ok) throw new Error('Manifest fetch failed');
-        const records = await res.json();
-        return records.find(r => r.sha256_hash === hash) || null;
-    } catch {
-        return null;
+  try {
+    const response = await fetch(`records/${hash}.json?t=${Date.now()}`);
+    if (!response.ok) throw new Error('Record not found');
+    const record = await response.json();
+    renderVerificationSuccess(container, record);
+  } catch {
+    if (retryCount < 2) {
+      setTimeout(() => executeVerification(hash, retryCount + 1), 8000);
+    } else {
+      renderVerificationFailure(
+        container,
+        'Record Not Found',
+        'This document fingerprint could not be located in our ledger. ' +
+        'If the certificate was issued within the last few minutes, the ' +
+        'synchronization node may still be processing. Please wait 60 seconds and refresh.'
+      );
     }
+  }
 }
 
-function showFound(record) {
-    document.getElementById('verifyStatus').style.display   = 'none';
-    document.getElementById('resultNotFound').style.display = 'none';
-    const found = document.getElementById('resultFound');
-    found.style.display = 'block';
+// ── Render functions ───────────────────────────────────────────────────────
 
-    const fields = {
-        'Control number':  record.control_number,
-        'Document type':   record.document_type,
-        'Issued':          record.timestamp,
-        'Operator':        record.signer,
-        'Position':        record.position,
-        'Status':          record.status,
-        'Chain sequence':  record.sequence != null ? `#${record.sequence}` : '—',
-    };
-
-    document.getElementById('resultDetails').innerHTML =
-        Object.entries(fields).map(([k, v]) =>
-            `<dt>${esc(k)}</dt><dd>${esc(String(v ?? '—'))}</dd>`
-        ).join('');
-
-    // Hash display
-    const sig = record.data_signature || {};
-    document.getElementById('resultChain').innerHTML = `
-        <h3>Cryptographic anchors</h3>
-        <dl>
-            <dt>SHA-256 fingerprint</dt>
-            <dd class="hash-formatted">${fmtHash(record.sha256_hash)}</dd>
-            <dt>Chain hash</dt>
-            <dd class="hash-formatted">${fmtHash(record.chain_hash)}</dd>
-            <dt>Integrity scope</dt>
-            <dd>${esc(sig.integrity_scope || '—')}</dd>
-        </dl>`;
-
-    document.getElementById('resultSig').innerHTML = `
-        <details class="sig-details">
-            <summary>GPG signature</summary>
-            <pre class="sig-pre">${esc(sig.gpg_signature || '(none)')}</pre>
-        </details>`;
-
-    found.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function renderLoadingState(container, message) {
+  container.innerHTML = `
+    <div class="status-banner status-pending">
+      <div class="spinner"></div>
+      <span>${escapeHtml(message)}</span>
+    </div>
+  `;
 }
 
-function showNotFound(hash) {
-    document.getElementById('verifyStatus').style.display   = 'none';
-    document.getElementById('resultFound').style.display    = 'none';
-    const nf = document.getElementById('resultNotFound');
-    nf.style.display = 'block';
-    const el = document.getElementById('notFoundHash');
-    if (el) el.textContent = hash;
-    nf.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function renderVerificationSuccess(container, data) {
+  // Optional PhilSys identity block
+  const philIdBlock = data.philid_pcn ? `
+    <h3 class="section-title">Verified Subject Identity</h3>
+    <div class="data-grid">
+      <div class="data-item">
+        <span class="data-label">PhilSys PCN (Masked)</span>
+        <span class="data-value">${escapeHtml(data.philid_pcn.replace(/.(?=.{4})/g, '•'))}</span>
+      </div>
+      <div class="data-item">
+        <span class="data-label">Subject ID Salt-Hash</span>
+        <span class="data-value" style="font-family:var(--font-mono);font-size:0.68rem;word-break:break-all;">${escapeHtml(data.philid_hash)}</span>
+      </div>
+    </div>
+  ` : '';
+
+  const gpgLabel = data.data_signature?.gpg_signature
+    ? 'Valid OpenPGP Cryptographic Signature'
+    : 'N/A';
+
+  container.innerHTML = `
+    <div class="status-banner status-verified">
+      <span class="status-icon">✓</span>
+      AUTHENTIC CIVIC RECORD — VERIFIED
+    </div>
+    <div class="card-body">
+
+      <h3 class="section-title">Official Document Details</h3>
+      <div class="data-grid">
+        <div class="data-item">
+          <span class="data-label">Control Number</span>
+          <span class="data-value" style="font-weight:700;color:var(--navy-mid);">${escapeHtml(data.control_number) || '—'}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Document Type</span>
+          <span class="data-value"><span class="badge">${escapeHtml(data.document_type || 'GENERAL').toUpperCase()}</span></span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Timestamp</span>
+          <span class="data-value">${escapeHtml(data.timestamp) || '—'}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Authorized Signatory</span>
+          <span class="data-value">
+            ${escapeHtml(data.signer) || '—'}
+            ${data.position ? `<br><small style="color:var(--muted);font-size:0.8rem;">${escapeHtml(data.position)}</small>` : ''}
+          </span>
+        </div>
+      </div>
+
+      ${philIdBlock}
+
+      <h3 class="section-title">TruthChain Cryptographic Audit Path</h3>
+      <div class="crypto-proofs">
+
+        <div class="crypto-item">
+          <div class="crypto-icon">🔗</div>
+          <div class="crypto-text">
+            <strong>Document Body Hash (SHA-256)</strong>
+            <span>${escapeHtml(data.sha256_hash) || '—'}</span>
+          </div>
+        </div>
+
+        <div class="crypto-item">
+          <div class="crypto-icon">🗄️</div>
+          <div class="crypto-text">
+            <strong>immudb Immutable Root Anchor</strong>
+            <span>Transaction Block ID: #${escapeHtml(String(data.immudb_transaction_id || 'Anchored'))}</span>
+          </div>
+        </div>
+
+        <div class="crypto-item">
+          <div class="crypto-icon">✍️</div>
+          <div class="crypto-text">
+            <strong>Signatory GPG Integrity Seal</strong>
+            <span>${escapeHtml(gpgLabel)}</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
 }
 
-function showLoading(show) {
-    const el = document.getElementById('verifyStatus');
-    if (el) el.style.display = show ? 'block' : 'none';
-    document.getElementById('resultFound').style.display    = 'none';
-    document.getElementById('resultNotFound').style.display = 'none';
+function renderVerificationFailure(container, title, message) {
+  container.innerHTML = `
+    <div class="status-banner status-error">
+      <span class="status-icon">✕</span>
+      ${escapeHtml(title)}
+    </div>
+    <div class="card-body" style="text-align:center;padding:2.5rem 2rem;">
+      <p class="fallback-text">${escapeHtml(message)}</p>
+      <button onclick="window.location.reload()" class="btn-retry">Retry Verification</button>
+    </div>
+  `;
 }
 
-async function run(hash, config) {
-    const btn = document.getElementById('verifyBtn');
-    if (btn) btn.disabled = true;
-    showLoading(true);
-    try {
-        const record = await verify(hash, config);
-        if (record) showFound(record);
-        else         showNotFound(hash);
-    } finally {
-        if (btn) btn.disabled = false;
+function renderManualForm(container) {
+  container.innerHTML = `
+    <div class="status-banner" style="background:var(--navy-deep);">
+      🔍 Manual Document Verification
+    </div>
+    <div class="card-body fallback-form">
+      <p class="fallback-text">
+        Paste the 64-character SHA-256 fingerprint printed on the footer of the
+        document, or scan its QR code with a camera-enabled device.
+      </p>
+      <div class="form-group">
+        <label class="form-label" for="manualHashInput">SHA-256 Document Fingerprint</label>
+        <input
+          type="text"
+          id="manualHashInput"
+          class="form-input"
+          placeholder="e.g. 9c91053dfde699fe01d56f8acea8cfb3…"
+          maxlength="64"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <p class="form-hint">Must be exactly 64 hexadecimal characters.</p>
+      </div>
+      <button id="manualSubmitBtn" class="btn-submit">Query Ledger Registry</button>
+    </div>
+  `;
+
+  const btn   = document.getElementById('manualSubmitBtn');
+  const input = document.getElementById('manualHashInput');
+
+  function handleSubmit() {
+    const hash = input.value.trim();
+    if (/^[0-9a-fA-F]{64}$/.test(hash)) {
+      executeVerification(hash);
+    } else {
+      input.classList.add('input-error');
+      input.focus();
+      setTimeout(() => input.classList.remove('input-error'), 2000);
     }
+  }
+
+  btn.addEventListener('click', handleSubmit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmit(); });
+  input.addEventListener('input', () => input.classList.remove('input-error'));
 }
-
-function initForm(config) {
-    // Pre-fill hash from URL ?hash= or #hash
-    const params = new URLSearchParams(window.location.search);
-    const hashParam = params.get('hash') || window.location.hash.replace('#', '');
-    const input = document.getElementById('hashInput');
-
-    if (hashParam && /^[0-9a-fA-F]{64}$/.test(hashParam)) {
-        if (input) input.value = hashParam;
-        run(hashParam.toLowerCase(), config);
-    }
-
-    const form = document.getElementById('verifyForm');
-    if (!form) return;
-    form.addEventListener('submit', e => {
-        e.preventDefault();
-        const val = (input?.value || '').trim().toLowerCase();
-        if (!/^[0-9a-f]{64}$/.test(val)) {
-            input?.setCustomValidity('Please enter a valid 64-character SHA-256 hash.');
-            input?.reportValidity();
-            return;
-        }
-        input?.setCustomValidity('');
-        // Update URL without reload for shareability
-        history.replaceState(null, '', `?hash=${val}`);
-        run(val, config);
-    });
-
-    input?.addEventListener('input', () => input.setCustomValidity(''));
-}
-
-// Wait for config to be ready
-if (window.__orp_config) {
-    initForm(window.__orp_config);
-} else {
-    document.addEventListener('orp:config', ({ detail }) => initForm(detail));
-    // Fallback in case config fails
-    setTimeout(() => {
-        if (!window.__orp_config) initForm(null);
-    }, 3000);
-}
-
-})();

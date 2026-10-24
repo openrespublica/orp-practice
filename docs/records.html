@@ -3,90 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Public ledger of all documents anchored to the OpenResPublica TruthChain.">
-    <meta name="theme-color" content="#002147">
     <title>Public Ledger | OpenResPublica TruthChain</title>
-    <link rel="stylesheet" href="assets/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --navy: #002147; --navy-deep: #001530; --navy-mid: #003366;
+            --gold: #C9A84C; --gold-pale: #FDF3D0;
+            --white: #FAFAF7; --ink: #1A1A2E; --muted: #6B7280;
+            --row-hover: rgba(0,33,71,0.04); --border: rgba(0,33,71,0.1);
+            --font-serif: 'Playfair Display', Georgia, serif;
+            --font-sans: 'Source Sans 3', system-ui, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+        }
+        body { background: var(--white); color: var(--ink); font-family: var(--font-sans); min-height: 100vh; display: flex; flex-direction: column; }
+
+        .site-header { background: var(--navy-deep); border-bottom: 3px solid var(--gold); position: relative; overflow: hidden; }
+        .site-header::before { content:''; position:absolute; inset:0; background: repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(201,168,76,0.04) 40px,rgba(201,168,76,0.04) 41px), repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(201,168,76,0.04) 40px,rgba(201,168,76,0.04) 41px); pointer-events:none; }
+        .header-inner { max-width: 1000px; margin: 0 auto; padding: 2.5rem 1.5rem 2rem; text-align: center; position: relative; }
+        .republic-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .seal-line { display:flex; align-items:center; justify-content:center; gap:1rem; margin-bottom:1.25rem; }
+        .seal-ornament { flex:1; height:1px; background:linear-gradient(to right,transparent,var(--gold),transparent); max-width:120px; }
+        .seal-diamond  { width:10px; height:10px; background:var(--gold); transform:rotate(45deg); flex-shrink:0; }
+        .site-header h1 { font-family: var(--font-serif); font-size: clamp(1.6rem,4vw,2.4rem); font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 0.4rem; }
+        .site-header .subtitle { font-size: 0.85rem; color: rgba(201,168,76,0.85); letter-spacing: 0.05em; }
+
+        main { flex:1; max-width:1000px; margin:0 auto; width:100%; padding:2rem 1.5rem; }
+
+        .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-bottom:1.5rem; }
+        .stat-card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:1rem 1.25rem; text-align:center; }
+        .stat-card .stat-value { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--navy-mid); line-height:1; }
+        .stat-card .stat-label { font-size:0.7rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-top:0.3rem; }
+        .stat-card.gold-accent .stat-value { color:#8a6a14; }
+
+        .toolbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+        .toolbar-left h2 { font-family:var(--font-serif); font-size:1.1rem; color:var(--navy-mid); font-weight:700; }
+        .toolbar-left p  { font-size:0.78rem; color:var(--muted); margin-top:0.1rem; }
+        .search-wrap { position:relative; flex-shrink:0; }
+        .search-icon { position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.85rem; pointer-events:none; }
+        .search-input { font-family:var(--font-sans); font-size:0.85rem; padding:0.6rem 1rem 0.6rem 2.25rem; border:1.5px solid var(--border); border-radius:8px; background:#fff; color:var(--ink); outline:none; width:260px; transition:border-color 0.2s; }
+        .search-input::placeholder { color:#bbb; }
+        .search-input:focus { border-color:var(--navy-mid); }
+
+        .table-wrap { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 4px 24px rgba(0,33,71,0.06); }
+        table { width:100%; border-collapse:collapse; table-layout:fixed; }
+        thead { background:var(--navy-deep); }
+        thead th { font-family:var(--font-sans); font-size:0.65rem; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:rgba(201,168,76,0.9); padding:0.85rem 1rem; text-align:left; }
+        thead th:last-child { text-align:center; }
+        col.col-ctrl   { width:28%; }
+        col.col-date   { width:14%; }
+        col.col-type   { width:18%; }
+        col.col-hash   { width:26%; }
+        col.col-action { width:14%; }
+        tbody tr { border-bottom:1px solid rgba(0,33,71,0.07); transition:background 0.15s; }
+        tbody tr:last-child { border-bottom:none; }
+        tbody tr:hover { background:var(--row-hover); }
+        tbody td { padding:0.85rem 1rem; font-size:0.875rem; vertical-align:middle; }
+        .ctrl-num  { font-family:var(--font-sans); font-weight:600; color:var(--navy-mid); font-size:0.82rem; }
+        .date-cell { font-size:0.8rem; color:var(--muted); }
+        .badge-type { display:inline-block; background:rgba(0,33,71,0.07); color:var(--navy-mid); font-size:0.65rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:3px 8px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+        .hash-cell { font-family:var(--font-mono); font-size:0.72rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .action-cell { text-align:center; }
+        .verify-link { display:inline-block; font-size:0.75rem; font-weight:600; color:var(--navy-mid); border:1px solid rgba(0,51,102,0.25); border-radius:5px; padding:4px 12px; text-decoration:none; transition:background 0.15s,color 0.15s,border-color 0.15s; letter-spacing:0.03em; white-space:nowrap; }
+        .verify-link:hover { background:var(--navy-mid); color:#fff; border-color:var(--navy-mid); }
+
+        .table-msg { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:0.875rem; }
+        .table-msg .spinner { width:32px; height:32px; border:2.5px solid rgba(0,51,102,0.12); border-top-color:var(--navy-mid); border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 1rem; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .table-footer { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:rgba(0,33,71,0.02); border-top:1px solid var(--border); font-size:0.78rem; color:var(--muted); flex-wrap:wrap; gap:0.5rem; }
+        .page-controls { display:flex; gap:0.4rem; }
+        .page-btn { padding:4px 12px; border:1px solid var(--border); border-radius:5px; background:#fff; font-family:var(--font-sans); font-size:0.78rem; color:var(--navy-mid); cursor:pointer; transition:background 0.15s; }
+        .page-btn:disabled { opacity:0.4; cursor:default; }
+        .page-btn:not(:disabled):hover { background:var(--row-hover); }
+
+        .footer-nav { margin-top:2rem; display:flex; justify-content:center; gap:0.25rem; border-top:1px solid rgba(0,33,71,0.08); padding-top:1.5rem; }
+        .footer-nav a { font-size:0.83rem; color:var(--muted); text-decoration:none; padding:0.4rem 1rem; border-radius:6px; transition:background 0.15s,color 0.15s; }
+        .footer-nav a:hover  { background:rgba(0,33,71,0.06); color:var(--navy-mid); }
+        .footer-nav a.active { color:var(--navy-mid); font-weight:600; background:rgba(0,33,71,0.06); }
+        .site-footer { text-align:center; padding:1.5rem; font-size:0.75rem; color:var(--muted); border-top:1px solid rgba(0,0,0,0.07); }
+        .site-footer strong { color:var(--navy-mid); }
+
+        @media (max-width:640px) {
+            .stats-row { grid-template-columns:1fr 1fr; }
+            .stats-row .stat-card:last-child { grid-column:span 2; }
+            .search-input { width:100%; }
+            .toolbar { flex-direction:column; align-items:flex-start; }
+            .search-wrap { width:100%; }
+            col.col-type, col.col-hash { display:none; }
+            td:nth-child(3), td:nth-child(4), th:nth-child(3), th:nth-child(4) { display:none; }
+        }
+    </style>
 </head>
 <body>
-<header class="topbar">
-    <div class="topbar-inner">
-        <div class="brand">
-            <div class="brand-badge" aria-hidden="true">🏛</div>
-            <div>
-                <span class="brand-name">OpenResPublica</span>
-                <span class="brand-sub">TruthChain · Public Ledger</span>
+
+    <header class="site-header">
+        <div class="header-inner">
+            <p class="republic-label">Republic of the Philippines</p>
+            <div class="seal-line">
+                <div class="seal-ornament"></div>
+                <div class="seal-diamond"></div>
+                <div class="seal-ornament"></div>
+            </div>
+            <h1>Public Audit Ledger</h1>
+            <p class="subtitle">Transparency Portal &nbsp;·&nbsp; <span data-config="lgu.name">—</span></p>
+        </div>
+    </header>
+
+    <main>
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">—</div>
+                <div class="stat-label">Total Records</div>
+            </div>
+            <div class="stat-card gold-accent">
+                <div class="stat-value" id="statLatest">—</div>
+                <div class="stat-label">Latest Issue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statYear">—</div>
+                <div class="stat-label">Ledger Year</div>
             </div>
         </div>
-        <nav class="topnav" aria-label="Site navigation">
-            <a href="index.html" class="nav-link">Home</a>
-            <a href="verify.html" class="nav-link">Verify</a>
-            <a href="records.html" class="nav-link active" aria-current="page">Ledger</a>
-            <a href="about.html" class="nav-link">About</a>
-        </nav>
-    </div>
-</header>
 
-<main class="page-main page-main--wide">
-    <div class="page-header">
-        <h1>Public Ledger</h1>
-        <p class="page-sub">
-            All documents anchored to the TruthChain ledger.
-            Each entry is a SHA-256 fingerprint — the source document
-            never leaves the encrypted vault.
-        </p>
-    </div>
-
-    <div class="ledger-toolbar">
-        <input type="search" id="searchBox" class="search-input"
-               placeholder="Search control number, type, or hash…"
-               aria-label="Search records">
-        <span id="ledgerCount" class="ledger-count" aria-live="polite">Loading…</span>
-    </div>
-
-    <div style="overflow-x:auto">
-        <table role="table" aria-label="Document ledger">
-            <thead>
-                <tr>
-                    <th scope="col">Chain</th>
-                    <th scope="col">Control number</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Issued</th>
-                    <th scope="col">SHA-256 fingerprint</th>
-                    <th scope="col" style="text-align:center">Action</th>
-                </tr>
-            </thead>
-            <tbody id="ledgerBody">
-                <tr>
-                    <td colspan="6" style="text-align:center;padding:3rem;color:#6B7280">
-                        <div class="spinner"></div>
-                        &nbsp; Loading ledger…
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="table-footer">
-        <span id="pageInfo" aria-live="polite">—</span>
-        <div class="page-btns">
-            <button class="page-btn" id="lPrev" disabled aria-label="Previous page">← Prev</button>
-            <button class="page-btn" id="lNext" disabled aria-label="Next page">Next →</button>
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <h2>Immutable Activity Log</h2>
+                <p>All entries are cryptographically anchored to immudb and cannot be altered.</p>
+            </div>
+            <div class="search-wrap">
+                <span class="search-icon">⌕</span>
+                <input type="text" id="search" class="search-input" placeholder="Search control no. or type…" oninput="searchLedger()">
+            </div>
         </div>
-    </div>
-</main>
 
-<footer class="site-footer">
-    <div class="container footer-inner">
-        <span data-config="lgu.name">OpenResPublica</span> &nbsp;·&nbsp;
-        TruthChain v2.0 &nbsp;·&nbsp;
-        Ed25519 / LUKS2 / SHA-256 Hash Chain &nbsp;·&nbsp;
-        Republic Act 10173 — Data Privacy Act of 2012
-    </div>
-</footer>
+        <div class="table-wrap">
+            <table>
+                <colgroup>
+                    <col class="col-ctrl">
+                    <col class="col-date">
+                    <col class="col-type">
+                    <col class="col-hash">
+                    <col class="col-action">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Control No.</th>
+                        <th>Date Issued</th>
+                        <th>Document Type</th>
+                        <th>Fingerprint</th>
+                        <th style="text-align:center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ledger-body">
+                    <tr>
+                        <td colspan="5">
+                            <div class="table-msg">
+                                <div class="spinner"></div>
+                                <p>Synchronizing with ledger…</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-footer">
+                <span id="recordCount">Loading…</span>
+                <div class="page-controls">
+                    <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>← Prev</button>
+                    <button class="page-btn" id="nextBtn" onclick="changePage(1)"  disabled>Next →</button>
+                </div>
+            </div>
+        </div>
 
-<script src="assets/config-loader.js"></script>
-<script src="assets/ledger.js"></script>
+        <nav class="footer-nav">
+            <a href="index.html">Verifier</a>
+            <a href="records.html" class="active">Public Ledger</a>
+            <a href="about.html">About</a>
+        </nav>
+    </main>
+
+    <footer class="site-footer">
+        Secured by <strong>immudb</strong> &amp; Ed25519 cryptography &nbsp;·&nbsp;
+        <strong>OpenResPublica TruthChain</strong> &nbsp;·&nbsp; <span data-config="lgu.name">—</span>
+    </footer>
+
+    <script src="assets/config-loader.js"></script>
+    <script src="assets/ledger.js"></script>
 </body>
 </html>
