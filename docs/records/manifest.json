@@ -6,6 +6,27 @@
     "operator_identity": "M-and-M",
     "document_type": "NATIONAL-ID-GOOGLE-D",
     "print_source": "cups",
+    "control_number": "Verified_2026-0013-NATIONAL-ID-GOOGLE-D",
+    "sequence": 13,
+    "sha256_hash": "eb8134828ce2658a531097204481861809bc0f1934942fc312bb5563d33f972f",
+    "chain_hash": "dc9623c7122a23525c9a504529acbdd90bc9de4d7d52cf5102d339906fa8d011",
+    "timestamp": "2026-10-30 03:31 PM PHT",
+    "timestamp_iso": "2026-10-30T15:31:37.089192+08:00",
+    "verification_url": "https://openrespublica.github.io/orp-practice/verify.html?hash=eb8134828ce2658a531097204481861809bc0f1934942fc312bb5563d33f972f",
+    "vault_storage": "LUKS2/AES-XTS-512/Argon2id \u2014 RA10173",
+    "data_signature": {
+      "gpg_signature": "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n{\"chain_hash\": \"dc9623c7122a23525c9a504529acbdd90bc9de4d7d52cf5102d339906fa8d011\", \"control_number\": \"Verified_2026-0013-NATIONAL-ID-GOOGLE-D\", \"document_type\": \"NATIONAL-ID-GOOGLE-D\", \"operator_identity\": \"M-and-M\", \"position\": \"FOUNDER/DEVELOPER \\u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS\", \"print_source\": \"cups\", \"sequence\": 13, \"sha256_hash\": \"eb8134828ce2658a531097204481861809bc0f1934942fc312bb5563d33f972f\", \"signer\": \"MARCO C. FERNANDEZ\", \"status\": \"PRINTED \\u2705\", \"timestamp\": \"2026-10-30 03:31 PM PHT\", \"timestamp_iso\": \"2026-10-30T15:31:37.089192+08:00\", \"vault_storage\": \"LUKS2/AES-XTS-512/Argon2id \\u2014 RA10173\", \"verification_url\": \"https://openrespublica.github.io/orp-practice/verify.html?hash=eb8134828ce2658a531097204481861809bc0f1934942fc312bb5563d33f972f\"}\n-----BEGIN PGP SIGNATURE-----\n\niHUEARYKAB0WIQSbinADT5fELh6qBG00aSvaqrC1VQUCauRH2QAKCRA0aSvaqrC1\nVRu/AP9EonROX0BSQO53qEQCqvjsA7C5GNC0NGPUmnqh7T5vugEAoARsaive67Fc\nePDWn8VE8q6e7t48BMhScZuU85GxYw4=\n=0gGg\n-----END PGP SIGNATURE-----\n",
+      "record_hash": "b720a58498cb21a48afecb90bd7a17e621cd757820dd5d1038fe01e49fc47056",
+      "integrity_scope": "LUKS2/AES-XTS-512/Argon2id/HashChain/RA10173"
+    }
+  },
+  {
+    "status": "PRINTED \u2705",
+    "signer": "MARCO C. FERNANDEZ",
+    "position": "FOUNDER/DEVELOPER \u2014 OPENRESPUBLICA INFORMATION TECHNOLOGY SOLUTIONS",
+    "operator_identity": "M-and-M",
+    "document_type": "NATIONAL-ID-GOOGLE-D",
+    "print_source": "cups",
     "control_number": "Verified_2026-0012-NATIONAL-ID-GOOGLE-D",
     "sequence": 12,
     "sha256_hash": "53888b71f31fc62e3fe4444df55ed03da6c400289efba46ba4a6fa9072e9d116",
